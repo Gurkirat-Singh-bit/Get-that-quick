@@ -1,0 +1,13 @@
+[project]
+name = "vosk-speaker-id"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "huggingface-hub>=1.4.1",
+    "numpy>=2.4.2",
+    "scipy>=1.17.0",
+    "sounddevice>=0.5.5",
+    "vosk>=0.3.45",
+]

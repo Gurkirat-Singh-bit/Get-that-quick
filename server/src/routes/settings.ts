@@ -1,0 +1,45 @@
+// ── Settings routes — /api/settings ──────────────────────────────────────
+
+import { Hono } from "hono";
+import { getSettings, updateSettings } from "../services/config";
+import { testProvider as testLLMProvider } from "../services/llm";
+import type { AIProviderConfig } from "@shared/types";
+
+const settings = new Hono();
+
+// Get current settings (API keys are masked)
+settings.get("/", (c) => {
+  const s = structuredClone(getSettings());
+
+  // Mask API keys: show first 4 + last 4 chars only
+  for (const provider of Object.values(s.ai.providers)) {
+    if (provider.apiKey && provider.apiKey.length > 8) {
+      provider.apiKey =
+        provider.apiKey.slice(0, 4) + "..." + provider.apiKey.slice(-4);
+    } else if (provider.apiKey) {
+      provider.apiKey = "****";
+    }
+  }
+
+  return c.json({ ok: true, data: s });
+});
+
+// Update settings (deep merge)
+settings.put("/", async (c) => {
+  const body = await c.req.json();
+  const updated = updateSettings(body);
+  return c.json({ ok: true, data: updated });
+});
+
+// Test LLM provider connection
+settings.post("/test-provider", async (c) => {
+  const body = await c.req.json<AIProviderConfig>();
+  const result = await testLLMProvider(body);
+
+  if (result.ok) {
+    return c.json({ ok: true, data: { connected: true } });
+  }
+  return c.json({ ok: false, error: result.error }, 400);
+});
+
+export default settings;

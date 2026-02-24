@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Prompt Toolkit Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#FF5F38",
+                        "background-light": "#F0F2F5",
+                        "background-dark": "#121212",
+                        "card-yellow": "#FFE58F",
+                        "card-purple": "#D4C1FB",
+                        "card-blue": "#C1E8FF",
+                    },
+                    fontFamily: {
+                        display: ["Plus Jakarta Sans", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "24px",
+                        "xl": "32px",
+                        "2xl": "40px",
+                    },
+                },
+            },
+        };
+    </script>
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex items-center justify-center p-4">
+<div class="w-full max-w-7xl h-[90vh] bg-[#2D2D2D] dark:bg-[#0A0A0A] rounded-[48px] p-4 flex gap-4 shadow-2xl relative overflow-hidden border-8 border-[#3D3D3D] dark:border-[#1A1A1A]">
+<aside class="w-16 flex flex-col items-center py-6 gap-8">
+<div class="w-10 h-10 bg-primary rounded-2xl flex items-center justify-center text-white shadow-lg">
+<span class="material-icons-outlined">bolt</span>
+</div>
+<nav class="flex flex-col gap-6 text-slate-400">
+<button class="hover:text-white transition-colors"><span class="material-icons-outlined">grid_view</span></button>
+<button class="bg-card-yellow text-slate-900 p-2 rounded-xl transition-colors"><span class="material-icons-outlined">folder</span></button>
+<button class="hover:text-white transition-colors"><span class="material-icons-outlined">edit_note</span></button>
+<button class="hover:text-white transition-colors"><span class="material-icons-outlined">history</span></button>
+<button class="hover:text-white transition-colors"><span class="material-icons-outlined">extension</span></button>
+<button class="hover:text-white transition-colors mt-auto"><span class="material-icons-outlined">settings</span></button>
+<button class="hover:text-white transition-colors"><span class="material-icons-outlined">logout</span></button>
+</nav>
+</aside>
+<main class="flex-1 bg-white dark:bg-[#1C1C1C] rounded-[40px] flex overflow-hidden shadow-inner">
+<div class="w-72 border-r border-slate-100 dark:border-slate-800 flex flex-col p-6">
+<div class="mb-8">
+<h2 class="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">Prompt Library</h2>
+<div class="relative group">
+<input class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Search prompts..." type="text"/>
+<span class="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar space-y-4">
+<div>
+<span class="text-xs font-semibold text-slate-500 dark:text-slate-400 ml-2">Categories</span>
+<div class="mt-3 space-y-2">
+<div class="flex items-center gap-3 p-3 bg-card-yellow/20 dark:bg-card-yellow/10 rounded-2xl text-slate-800 dark:text-slate-200">
+<span class="material-icons-outlined text-sm">terminal</span>
+<span class="text-sm font-medium">Coding Helpers</span>
+</div>
+<div class="flex items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl text-slate-600 dark:text-slate-400 transition-colors">
+<span class="material-icons-outlined text-sm">draw</span>
+<span class="text-sm font-medium">Design System</span>
+</div>
+<div class="flex items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl text-slate-600 dark:text-slate-400 transition-colors">
+<span class="material-icons-outlined text-sm">auto_awesome</span>
+<span class="text-sm font-medium">Creative Writing</span>
+</div>
+</div>
+</div>
+<div class="pt-4">
+<span class="text-xs font-semibold text-slate-500 dark:text-slate-400 ml-2">Recent Templates</span>
+<div class="mt-3 space-y-3">
+<div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all cursor-pointer">
+<p class="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 line-clamp-1">Refactor React Hook</p>
+<p class="text-[10px] text-slate-400 uppercase tracking-tight">Last used 2h ago</p>
+</div>
+<div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all cursor-pointer">
+<p class="text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 line-clamp-1">Tone &amp; Voice Fixer</p>
+<p class="text-[10px] text-slate-400 uppercase tracking-tight">Last used 5h ago</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="flex-1 flex flex-col relative bg-slate-50/50 dark:bg-slate-900/20">
+<header class="h-16 flex items-center justify-between px-8 border-b border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-[#1C1C1C]/50 backdrop-blur-md">
+<div>
+<h1 class="font-bold text-lg dark:text-white">Main Workspace</h1>
+<p class="text-[10px] text-slate-400 font-medium">LOCAL LLM CONNECTED • GPT-4 TURBO</p>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-primary transition-colors">
+<span class="material-icons-outlined text-sm">share</span>
+</button>
+<img alt="User avatar" class="w-8 h-8 rounded-full border-2 border-primary" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRfkCTQPukwjzGGSv9CnPSbbOAA7A8Mks_k_ToE4sH0QWY2wevHoxmnMubgIeqa4TOgQ6thWwccw0ArikTFEMu5ann4bbzvigmszXt0GfVmkfzmwAbk2udeDkhdunn5gAV5WTIet30SGJgit-8C-ueKf9bqDQKGx8N8VOyQBJWVKramsUMciRHYTCqfSrLFIe0vW4NWeHf11YfEYPq02KVPSZQNKgirGDM-FDTS2F1NX2zaPVop7ww590hYVI9UCAgz9nYu8OXVoc"/>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-8 flex flex-col gap-6 custom-scrollbar">
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-2xl bg-slate-200 dark:bg-slate-800 flex-shrink-0 flex items-center justify-center">
+<span class="material-icons-outlined text-slate-500">smart_toy</span>
+</div>
+<div class="max-w-lg bg-white dark:bg-slate-800 p-5 rounded-3xl rounded-tl-none shadow-sm border border-slate-100 dark:border-slate-700">
+<p class="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                                Hello Kacie! I'm ready to help you build your next prompt. Which template should we start with today?
+                            </p>
+</div>
+</div>
+<div class="flex gap-4 flex-row-reverse">
+<div class="w-10 h-10 rounded-2xl bg-primary flex-shrink-0 flex items-center justify-center text-white shadow-lg">
+<span class="material-icons-outlined">person</span>
+</div>
+<div class="max-w-lg bg-primary text-white p-5 rounded-3xl rounded-tr-none shadow-md">
+<p class="text-sm leading-relaxed">
+                                Let's refine the "Refactor React Hook" prompt to include TypeScript optimizations for generics.
+                            </p>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-2xl bg-slate-200 dark:bg-slate-800 flex-shrink-0 flex items-center justify-center">
+<span class="material-icons-outlined text-slate-500">smart_toy</span>
+</div>
+<div class="max-w-lg bg-white dark:bg-slate-800 p-5 rounded-3xl rounded-tl-none shadow-sm border border-slate-100 dark:border-slate-700">
+<p class="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                                Excellent choice. I've updated the context to focus on <span class="font-mono bg-slate-100 dark:bg-slate-700 px-1 rounded">T extends generic</span> patterns. Should I also include performance hooks like <span class="font-mono bg-slate-100 dark:bg-slate-700 px-1 rounded">useMemo</span> and <span class="font-mono bg-slate-100 dark:bg-slate-700 px-1 rounded">useCallback</span> in the refactoring logic?
+                            </p>
+</div>
+</div>
+</div>
+<div class="p-8 pt-0">
+<div class="max-w-3xl mx-auto bg-white dark:bg-slate-800 rounded-[32px] shadow-xl border border-slate-100 dark:border-slate-700 p-2 pl-6 flex items-center gap-4 group focus-within:ring-2 focus-within:ring-primary/30 transition-all">
+<input class="flex-1 bg-transparent border-none focus:ring-0 text-sm py-4 dark:text-white" placeholder="Type your prompt instructions..." type="text"/>
+<div class="flex items-center gap-2 pr-2">
+<button class="w-12 h-12 flex items-center justify-center rounded-2xl text-slate-400 hover:text-primary transition-colors">
+<span class="material-icons-outlined">mic</span>
+</button>
+<button class="w-12 h-12 bg-primary flex items-center justify-center rounded-2xl text-white shadow-lg shadow-primary/30 hover:scale-105 transition-transform">
+<span class="material-icons-outlined -rotate-45 ml-1">send</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="w-80 border-l border-slate-100 dark:border-slate-800 flex flex-col p-6 gap-6 bg-slate-50/30 dark:bg-transparent">
+<div class="bg-card-purple dark:bg-card-purple/10 rounded-[32px] p-5 flex flex-col relative overflow-hidden">
+<div class="flex items-center justify-between mb-4">
+<span class="text-[10px] font-bold uppercase tracking-widest text-purple-700 dark:text-purple-400">Community Driven</span>
+<span class="material-icons-outlined text-purple-700 dark:text-purple-400 text-sm">public</span>
+</div>
+<h3 class="text-lg font-bold text-slate-900 dark:text-slate-100 leading-tight mb-2">Social Media Strategy Master</h3>
+<p class="text-xs text-slate-700 dark:text-slate-400 mb-6">Trending toolkit for multi-platform content generation.</p>
+<div class="flex -space-x-2 mb-6">
+<img alt="User" class="w-8 h-8 rounded-full border-2 border-card-purple" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDdvhV5diwz6igs3LixfPMELP2KSI00ylEtv1Jnlkd81PQBb5TLqLpJFY5liJUDjjhd9shNCrPO31XK3rbsUFJc9lycHgmskmRUden2tmCJvMhISYESDfxyi2iBgiKigLp2myQmp0YVroZ6-FrlRJ7_kLwB4KqmWDp17LN_Rtw-kYVOvQYRNSMWTgBeQ7RX1sVp4mlVdNU1lVCTbst7qFM-q3HmXLk0hd2a8hieQ9HqI9YG2YxtNkiX4sUR2ozuPbkwadXQnIIIjI"/>
+<img alt="User" class="w-8 h-8 rounded-full border-2 border-card-purple" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFSGgLlg9aubrPpOD0lLdlO4T0MT_PoU-MZgcfu1Cb6sg9fjvkbPtNUyt1x6smRJ2PYp4VUQWIB9Re1QaGnNcrHE_pUJoCFtEApR92lbecb-lnMDj44YsBS7XhHs8vV_m-HZ_Wl3G-K9ihfTSkZwhjVNUBSPZ2cRrM0CMaKjI_AEsCyq_jQ_bxrvvFSsh60FMTpgNtnSpir4crE49JkVH9WMqyigeRYLEkduhFLJNjMTJYjJ06eTOZgyoSOqxmPpwZP-BEHrGY_1w"/>
+<img alt="User" class="w-8 h-8 rounded-full border-2 border-card-purple" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkTLt_R6NG9NcK0oVM-msuoVGuWI3b9REqUIhiGGRCqC7YbaljqtDpxhfFlC36g4DbQyMUFqJ5GjTltZkWcROtGijMEuNmjlwfkJyBnvowryk1zQFs-17cDuR4tAnJLLqixLGj5HVKGIeLhN0rCmMdQij-XLU8HOcCNuMBUHKXETGSDQy8-K_WJLCsObluSXMtxQFn4ZGiITJbsK9A8WldDptQ76Yddj9EYbIYam2BtCwok-qw5Oy9rBZE9kPfhA128_h1ltB4bFE"/>
+<div class="w-8 h-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-500 border-2 border-card-purple">+42</div>
+</div>
+<button class="w-full bg-slate-900 dark:bg-white dark:text-slate-900 text-white py-3 rounded-2xl text-xs font-bold hover:opacity-90 transition-opacity">
+                        Clone Template
+                    </button>
+</div>
+<div class="flex-1 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[32px] p-5 flex flex-col">
+<div class="flex items-center justify-between mb-6">
+<span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Personal Vault</span>
+<span class="material-icons-outlined text-slate-400 text-sm">verified_user</span>
+</div>
+<div class="space-y-4">
+<div class="bg-card-blue/30 dark:bg-card-blue/5 p-4 rounded-2xl flex items-center gap-4">
+<div class="w-10 h-10 bg-card-blue rounded-xl flex items-center justify-center text-blue-800">
+<span class="material-icons-outlined">storage</span>
+</div>
+<div>
+<p class="text-xs font-bold dark:text-white">Local Library</p>
+<p class="text-[10px] text-slate-500 uppercase">124 Prompt Sets</p>
+</div>
+</div>
+<div class="bg-card-yellow/30 dark:bg-card-yellow/5 p-4 rounded-2xl flex items-center gap-4">
+<div class="w-10 h-10 bg-card-yellow rounded-xl flex items-center justify-center text-yellow-800">
+<span class="material-icons-outlined">star_outline</span>
+</div>
+<div>
+<p class="text-xs font-bold dark:text-white">Favorites</p>
+<p class="text-[10px] text-slate-500 uppercase">12 Prompts</p>
+</div>
+</div>
+</div>
+<div class="mt-auto pt-6">
+<div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl">
+<div class="flex justify-between items-end mb-2">
+<p class="text-[10px] font-bold text-slate-400">DAILY TOKENS</p>
+<p class="text-xs font-bold text-slate-700 dark:text-slate-200">12k / 50k</p>
+</div>
+<div class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 24%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<div class="absolute -top-24 -right-24 w-64 h-64 bg-primary opacity-5 blur-[120px] rounded-full pointer-events-none"></div>
+<div class="absolute -bottom-24 -left-24 w-64 h-64 bg-card-purple opacity-10 blur-[120px] rounded-full pointer-events-none"></div>
+</div>
+<button class="fixed bottom-8 right-8 w-12 h-12 bg-white dark:bg-slate-800 shadow-xl rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-primary transition-colors border border-slate-200 dark:border-slate-700" onclick="document.documentElement.classList.toggle('dark')">
+<span class="material-icons-outlined dark:hidden">dark_mode</span>
+<span class="material-icons-outlined hidden dark:block">light_mode</span>
+</button>
+
+</body></html>

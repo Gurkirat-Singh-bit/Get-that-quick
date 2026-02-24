@@ -1,0 +1,32 @@
+[
+  {
+    "id": "vosk-model-small-en-us-0.15",
+    "name": "English (US) — Small",
+    "language": "en-us",
+    "size": "40 MB",
+    "accuracy": "10.38 WER",
+    "minRAM": "256 MB",
+    "url": "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip",
+    "default": true
+  },
+  {
+    "id": "vosk-model-en-us-0.22",
+    "name": "English (US) — Large",
+    "language": "en-us",
+    "size": "1.8 GB",
+    "accuracy": "5.69 WER",
+    "minRAM": "4 GB",
+    "url": "https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip",
+    "default": false
+  },
+  {
+    "id": "vosk-model-en-us-0.42-gigaspeech",
+    "name": "English (US) — GigaSpeech",
+    "language": "en-us",
+    "size": "2.3 GB",
+    "accuracy": "4.81 WER",
+    "minRAM": "6 GB",
+    "url": "https://alphacephei.com/vosk/models/vosk-model-en-us-0.42-gigaspeech.zip",
+    "default": false
+  }
+]

@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.bun/
+
+# Build outputs
+client/dist/
+server/dist/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test models (large binary files)
+test/model/
+test/model-spk/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Logs
+*.log
