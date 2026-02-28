@@ -49,6 +49,8 @@ interface ChatAreaProps {
   onDeleteMessage?: (messageId: string) => void;
   /** Apply a template by starting a new session with it. */
   onApplyTemplate?: (templateId: string) => void;
+  /** Name of the active template (resolved from templateId). */
+  activeTemplateName?: string | null;
 }
 
 /**
@@ -73,6 +75,7 @@ export function ChatArea({
   onEditMessage,
   onDeleteMessage,
   onApplyTemplate,
+  activeTemplateName,
 }: ChatAreaProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -153,9 +156,17 @@ export function ChatArea({
 
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-[#E2E4E9] shrink-0">
-        <h1 className="text-base font-bold tracking-tight text-zinc-800">
-          {session?.title ?? "New Chat"}
-        </h1>
+        <div className="flex items-center gap-2 min-w-0">
+          <h1 className="text-base font-bold tracking-tight text-zinc-800 truncate">
+            {session?.title ?? "New Chat"}
+          </h1>
+          {activeTemplateName && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium shrink-0">
+              <LayoutTemplate className="w-3 h-3" />
+              {activeTemplateName}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Messages — scrollable middle */}
@@ -168,7 +179,10 @@ export function ChatArea({
             </div>
             <h2 className="text-lg font-bold text-zinc-800 mb-1">GetThatQuick</h2>
             <p className="text-sm text-zinc-500 max-w-sm mb-6">
-              Your self-hosted prompt workbench. Type a message to start a new conversation.
+              {activeTemplateName
+                ? <>Template <strong>{activeTemplateName}</strong> loaded — type a message to begin.</>
+                : "Your self-hosted prompt workbench. Type a message to start a new conversation."
+              }
             </p>
 
             {/* Config warning banners */}

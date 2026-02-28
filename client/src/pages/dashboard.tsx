@@ -8,7 +8,7 @@
  * @module pages/dashboard
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { IconRail } from "@/components/layout/icon-rail";
 import { RightIconRail } from "@/components/layout/right-icon-rail";
@@ -83,6 +83,14 @@ export function Dashboard() {
   useEffect(() => {
     saveProjects(projects);
   }, [projects]);
+
+  /** Resolve the active template name from the session's templateId. */
+  const activeTemplateName = useMemo(() => {
+    const tid = sessionHook.activeSession?.templateId;
+    if (!tid) return null;
+    const all = [...templateHook.community, ...templateHook.local];
+    return all.find((t) => t.id === tid)?.title ?? tid;
+  }, [sessionHook.activeSession?.templateId, templateHook.community, templateHook.local]);
 
   /** Toggle a side panel open/closed. */
   const togglePanel = useCallback((side: "left" | "right") => {
@@ -213,6 +221,7 @@ export function Dashboard() {
             onApplyTemplate={async (templateId) => {
               await sessionHook.createSession(undefined, templateId);
             }}
+            activeTemplateName={activeTemplateName}
           />
         </main>
 
