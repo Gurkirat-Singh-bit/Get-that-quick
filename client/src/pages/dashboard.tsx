@@ -8,7 +8,7 @@
  * @module pages/dashboard
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { IconRail } from "@/components/layout/icon-rail";
 import { RightIconRail } from "@/components/layout/right-icon-rail";
@@ -18,10 +18,11 @@ import { ChatArea } from "@/components/chat/chat-area";
 import { RightSidebar } from "@/components/sidebar/right-sidebar";
 import { TemplateEditor } from "@/components/templates/template-editor";
 import { SettingsOverlay } from "@/components/settings/settings-overlay";
+import { ConfigPanel } from "@/components/settings/config-panel";
 import { useSessions } from "@/hooks/use-sessions";
 import { useTemplates } from "@/hooks/use-templates";
 import { useSettings } from "@/hooks/use-settings";
-import type { Project } from "@shared/types";
+import type { Project, AttachedDocument } from "@shared/types";
 
 /** Tracks which side panels are visible. */
 export interface PanelState {
@@ -36,6 +37,22 @@ export interface PanelState {
  * and delegates rendering to specialised child components.
  */
 const PROJECT_COLORS = ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#f97316"];
+const PROJECTS_STORAGE_KEY = "gtq_projects";
+
+/** Load projects from localStorage. */
+function loadProjects(): Project[] {
+  try {
+    const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Save projects to localStorage. */
+function saveProjects(projects: Project[]) {
+  localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
+}
 
 export function Dashboard() {
   const [panels, setPanels] = useState<PanelState>({ left: false, right: false });
@@ -43,13 +60,29 @@ export function Dashboard() {
   const [templateFilter, setTemplateFilter] = useState<TemplateFilter>("all");
   const [triggerCreate, setTriggerCreate] = useState(false);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [projectsOpen, setProjectsOpen] = useState(false);
+  const [configPanelOpen, setConfigPanelOpen] = useState(false);
+  const [projects, setProjects] = useState<Project[]>(loadProjects);
   const [nextColorIdx, setNextColorIdx] = useState(0);
+  const [documents, setDocuments] = useState<AttachedDocument[]>([]);
 
   const sessionHook = useSessions();
   const templateHook = useTemplates();
   const settingsHook = useSettings();
+
+  /** Keep session hook's settings ref in sync with latest settings. */
+  useEffect(() => {
+    sessionHook.setSettings(settingsHook.settings);
+  }, [settingsHook.settings, sessionHook.setSettings]);
+
+  /** Keep session hook's documents ref in sync. */
+  useEffect(() => {
+    sessionHook.setDocuments(documents);
+  }, [documents, sessionHook.setDocuments]);
+
+  /** Persist projects to localStorage when they change. */
+  useEffect(() => {
+    saveProjects(projects);
+  }, [projects]);
 
   /** Toggle a side panel open/closed. */
   const togglePanel = useCallback((side: "left" | "right") => {
@@ -91,6 +124,13 @@ export function Dashboard() {
     });
   }, [sessionHook]);
 
+  /** Rename a project. */
+  const handleRenameProject = useCallback((id: string, name: string) => {
+    setProjects((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, name, updatedAt: new Date().toISOString() } : p))
+    );
+  }, []);
+
   /** Move a session into or out of a project. */
   const handleMoveSession = useCallback((sessionId: string, projectId: string | null) => {
     sessionHook.moveSession(sessionId, projectId);
@@ -98,37 +138,54 @@ export function Dashboard() {
 
   return (
     <TooltipProvider>
-      <div className="h-screen w-screen bg-[#0A0A0B] flex overflow-hidden">
+      <div className="h-screen w-screen bg-background-dark flex overflow-hidden">
         {/* Left icon rail — chats, new chat, settings */}
         <IconRail
           chatsOpen={panels.left}
-          projectsOpen={projectsOpen}
-          onToggleChats={() => togglePanel("left")}
-          onToggleProjects={() => setProjectsOpen((p) => !p)}
+          projectsOpen={panels.left}
+          onToggleChats={() => { setConfigPanelOpen(false); togglePanel("left"); }}
+          onToggleProjects={() => { setConfigPanelOpen(false); togglePanel("left"); }}
           onSettingsClick={() => setSettingsOpen(true)}
           onNewChat={async () => { await sessionHook.createSession(); }}
+          configOpen={configPanelOpen}
+          onToggleConfig={() => {
+            if (configPanelOpen) {
+              setConfigPanelOpen(false);
+            } else {
+              setPanels((prev) => ({ ...prev, left: false }));
+              setConfigPanelOpen(true);
+            }
+          }}
         />
 
         {/* Left sidebar — sessions / recent chats */}
         <div
           className={`transition-all duration-300 ease-in-out overflow-hidden ${
-            panels.left ? "w-72" : "w-0"
+            panels.left || configPanelOpen ? "w-72" : "w-0"
           }`}
         >
           <div className="w-72 h-full">
-            <LeftSidebar
-              sessions={sessionHook.sessions}
-              activeSessionId={sessionHook.activeSession?.id ?? null}
-              onSelectSession={sessionHook.selectSession}
-              onCreateSession={async (title) => { await sessionHook.createSession(title); }}
-              onDeleteSession={sessionHook.deleteSession}
-              onRenameSession={sessionHook.renameSession}
-              loading={sessionHook.loading}
-              projects={projects}
-              onCreateProject={handleCreateProject}
-              onDeleteProject={handleDeleteProject}
-              onMoveSession={handleMoveSession}
-            />
+            {configPanelOpen ? (
+              <ConfigPanel
+                settings={settingsHook.settings}
+                onUpdateSettings={settingsHook.updateSettings}
+              />
+            ) : (
+              <LeftSidebar
+                sessions={sessionHook.sessions}
+                activeSessionId={sessionHook.activeSession?.id ?? null}
+                onSelectSession={sessionHook.selectSession}
+                onCreateSession={async (title) => { await sessionHook.createSession(title); }}
+                onDeleteSession={sessionHook.deleteSession}
+                onRenameSession={sessionHook.renameSession}
+                loading={sessionHook.loading}
+                projects={projects}
+                onCreateProject={handleCreateProject}
+                onDeleteProject={handleDeleteProject}
+                onRenameProject={handleRenameProject}
+                onMoveSession={handleMoveSession}
+              />
+            )}
           </div>
         </div>
 
@@ -140,7 +197,15 @@ export function Dashboard() {
             generating={sessionHook.generating}
             onNewChat={async () => { await sessionHook.createSession(); }}
             settings={settingsHook.settings}
+            onUpdateSettings={settingsHook.updateSettings}
             onOpenSettings={() => setSettingsOpen(true)}
+            onRegenerate={sessionHook.regenerateLastResponse}
+            onExpand={sessionHook.expandLastResponse}
+            onRefine={sessionHook.refineLastResponse}
+            documents={documents}
+            onDocumentsChange={setDocuments}
+            onEditMessage={sessionHook.editMessage}
+            onDeleteMessage={sessionHook.deleteMessage}
             onSaveAsTemplate={async (content) => {
               const tmpl = await templateHook.createTemplate("Untitled Template", content, "", "general");
               setEditingTemplateId(tmpl.id);
@@ -169,7 +234,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Right icon rail — templates */}
+        {/* Right icon rail — templates + config */}
         <RightIconRail
           templatesOpen={panels.right}
           activeFilter={templateFilter}

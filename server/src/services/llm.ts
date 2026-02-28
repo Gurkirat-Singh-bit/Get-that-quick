@@ -46,19 +46,53 @@ function buildClient(providerOverride?: string): {
 export async function* generateStream(
   systemPrompt: string,
   messages: { role: "user" | "assistant"; content: string }[],
+  options?: { temperature?: number; maxTokens?: number; thinkingEnabled?: boolean },
   providerOverride?: string
 ): AsyncGenerator<string> {
   const { client, model } = buildClient(providerOverride);
 
-  const stream = await client.chat.completions.create({
+  const params: Record<string, unknown> = {
     model,
     stream: true,
     messages: [{ role: "system", content: systemPrompt }, ...messages],
-  });
+  };
 
-  for await (const chunk of stream) {
-    const delta = chunk.choices[0]?.delta?.content;
-    if (delta) yield delta;
+  if (options?.temperature != null) params.temperature = options.temperature;
+  if (options?.maxTokens && options.maxTokens > 0) params.max_tokens = options.maxTokens;
+
+  // Extended thinking support (Anthropic via OpenRouter / Claude)
+  if (options?.thinkingEnabled) {
+    // OpenRouter / Anthropic extended thinking header
+    params.include_reasoning = true;
+  }
+
+  const stream = await client.chat.completions.create(params as any);
+
+  let inThinking = false;
+
+  for await (const chunk of stream as any) {
+    // Handle thinking/reasoning tokens from some providers
+    const reasoning = chunk.choices?.[0]?.delta?.reasoning;
+    if (reasoning) {
+      if (!inThinking) {
+        yield "<think>";
+        inThinking = true;
+      }
+      yield reasoning;
+    }
+    const delta = chunk.choices?.[0]?.delta?.content;
+    if (delta) {
+      if (inThinking) {
+        yield "</think>\n\n";
+        inThinking = false;
+      }
+      yield delta;
+    }
+  }
+
+  // Close thinking block if stream ended while still in reasoning
+  if (inThinking) {
+    yield "</think>\n\n";
   }
 }
 
@@ -66,16 +100,31 @@ export async function* generateStream(
 export async function generate(
   systemPrompt: string,
   messages: { role: "user" | "assistant"; content: string }[],
+  options?: { temperature?: number; maxTokens?: number; thinkingEnabled?: boolean },
   providerOverride?: string
 ): Promise<string> {
   const { client, model } = buildClient(providerOverride);
 
-  const response = await client.chat.completions.create({
+  const params: Record<string, unknown> = {
     model,
     messages: [{ role: "system", content: systemPrompt }, ...messages],
-  });
+  };
 
-  return response.choices[0]?.message?.content ?? "";
+  if (options?.temperature != null) params.temperature = options.temperature;
+  if (options?.maxTokens && options.maxTokens > 0) params.max_tokens = options.maxTokens;
+  if (options?.thinkingEnabled) {
+    params.include_reasoning = true;
+  }
+
+  const response = await client.chat.completions.create(params as any);
+
+  let result = "";
+  const choice = (response as any).choices?.[0];
+  if (choice?.message?.reasoning) {
+    result += `<think>${choice.message.reasoning}</think>\n\n`;
+  }
+  result += choice?.message?.content ?? "";
+  return result;
 }
 
 // ── Test ──────────────────────────────────────────────────────────────────
@@ -99,5 +148,38 @@ export async function testProvider(
     return { ok: !!res.choices[0]?.message?.content };
   } catch (err: any) {
     return { ok: false, error: err.message ?? String(err) };
+  }
+}
+
+// ── Model listing ─────────────────────────────────────────────────────────
+
+/** Fetch available models from a provider's /models endpoint. */
+export async function listProviderModels(
+  providerName?: string
+): Promise<{ id: string; name: string }[]> {
+  const settings = getSettings();
+  const name = providerName ?? settings.ai.provider;
+  const provider = settings.ai.providers[name];
+
+  if (!provider) {
+    throw new Error(`Provider "${name}" is not configured.`);
+  }
+
+  const client = new OpenAI({
+    apiKey: provider.apiKey || "none",
+    baseURL: provider.baseUrl,
+  });
+
+  try {
+    const models = await client.models.list();
+    const results: { id: string; name: string }[] = [];
+    for await (const m of models) {
+      results.push({ id: m.id, name: m.id });
+    }
+    // Sort alphabetically
+    results.sort((a, b) => a.id.localeCompare(b.id));
+    return results;
+  } catch (err: any) {
+    throw new Error(`Failed to list models: ${err.message ?? String(err)}`);
   }
 }

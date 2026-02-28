@@ -11,24 +11,25 @@ export const PORT = Number(process.env.PORT) || 3000;
 /** Default settings written on first launch. */
 export const DEFAULT_SETTINGS: Settings = {
   ai: {
-    provider: "openrouter",
-    providers: {
-      openrouter: {
-        apiKey: "",
-        model: "anthropic/claude-sonnet-4",
-        baseUrl: "https://openrouter.ai/api/v1",
-      },
-      openai: {
-        apiKey: "",
-        model: "gpt-4o",
-        baseUrl: "https://api.openai.com/v1",
-      },
-      ollama: {
-        apiKey: "",
-        model: "llama3",
-        baseUrl: "http://localhost:11434/v1",
-      },
-    },
+    provider: "",
+    providers: {},
+    systemPrompt: `You are GetThatQuick — a fast, precise, and knowledgeable AI assistant built into a self-hosted prompt workbench.
+
+Your core principles:
+- Be concise and direct. Skip filler phrases.
+- When asked to code, produce clean, production-ready code with brief explanations.
+- Use markdown formatting: headings, lists, code blocks, tables when helpful.
+- If unsure, say so honestly rather than guessing.
+- For complex tasks, break them into numbered steps.
+- Always prioritize accuracy over verbosity.
+
+You are running locally on the user's machine, so you can be candid and technical.`,
+    temperature: 0.7,
+    maxTokens: 0,
+    thinkingEnabled: true,
+    planMode: false,
+    positivePrompt: "",
+    negativePrompt: "",
   },
   stt: {
     activeModel: "vosk-model-small-en-us-0.15",

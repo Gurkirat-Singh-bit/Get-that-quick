@@ -198,6 +198,15 @@ export function deleteTemplate(id: string): Promise<null> {
   return request<null>(`/templates/${id}`, { method: "DELETE" });
 }
 
+/**
+ * List all discovered template categories.
+ *
+ * @returns An array of category path strings (e.g. "code/frontend").
+ */
+export function listCategories(): Promise<string[]> {
+  return request<string[]>("/templates/categories");
+}
+
 // ── Settings ────────────────────────────────────────────────────────────
 
 /**
@@ -248,6 +257,20 @@ export function testProvider(config: {
  */
 export function listModels(): Promise<VoskModelInfo[]> {
   return request<VoskModelInfo[]>("/models");
+}
+
+/**
+ * List available LLM models from a configured provider.
+ *
+ * @param provider - Provider name (e.g. "openrouter", "openai").
+ * @returns An array of model entries with id and name.
+ */
+export function listProviderModels(
+  provider: string
+): Promise<{ id: string; name: string }[]> {
+  return request<{ id: string; name: string }[]>(
+    `/generate/models/${encodeURIComponent(provider)}`
+  );
 }
 
 /**

@@ -33,6 +33,8 @@ interface LeftSidebarProps {
   onCreateProject: (name: string) => void;
   /** Delete a project. */
   onDeleteProject: (id: string) => void;
+  /** Rename a project. */
+  onRenameProject: (id: string, name: string) => void;
   /** Move a session into a project (null = ungrouped). */
   onMoveSession: (sessionId: string, projectId: string | null) => void;
 }
@@ -200,6 +202,7 @@ export function LeftSidebar({
   projects,
   onCreateProject,
   onDeleteProject,
+  onRenameProject,
   onMoveSession,
 }: LeftSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -207,7 +210,17 @@ export function LeftSidebar({
   const [creatingProject, setCreatingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editProjectValue, setEditProjectValue] = useState("");
   const nextColor = useRef(0);
+  const projectInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingProjectId) {
+      projectInputRef.current?.focus();
+      projectInputRef.current?.select();
+    }
+  }, [editingProjectId]);
 
   const filtered = sessions.filter(
     (s) => !searchQuery || s.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -272,6 +285,7 @@ export function LeftSidebar({
                 const isCollapsed = collapsed[project.id] ?? false;
                 const projectSessions = grouped(project.id);
                 const isDropTarget = dragOverTarget === project.id;
+                const isEditingProject = editingProjectId === project.id;
 
                 return (
                   <div key={project.id} className="mb-1">
@@ -281,12 +295,15 @@ export function LeftSidebar({
                       onDragLeave={() => setDragOverTarget(null)}
                       onDrop={(e) => handleDrop(e, project.id)}
                       className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all group",
+                        "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all group",
                         isDropTarget
                           ? "bg-primary/10 border border-primary/30 border-dashed"
-                          : "hover:bg-white/4"
+                          : "hover:bg-white/4",
+                        !isEditingProject && "cursor-pointer"
                       )}
-                      onClick={() => setCollapsed((c) => ({ ...c, [project.id]: !isCollapsed }))}
+                      onClick={() => {
+                        if (!isEditingProject) setCollapsed((c) => ({ ...c, [project.id]: !isCollapsed }));
+                      }}
                     >
                       <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: project.color }} />
                       {isCollapsed ? (
@@ -294,14 +311,59 @@ export function LeftSidebar({
                       ) : (
                         <ChevronDown className="w-3 h-3 text-zinc-600 shrink-0" />
                       )}
-                      <span className="text-[11px] font-medium text-zinc-300 flex-1 truncate">{project.name}</span>
+
+                      {isEditingProject ? (
+                        <div className="flex-1 flex items-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            ref={projectInputRef}
+                            type="text"
+                            value={editProjectValue}
+                            onChange={(e) => setEditProjectValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                const trimmed = editProjectValue.trim();
+                                if (trimmed) onRenameProject(project.id, trimmed);
+                                setEditingProjectId(null);
+                              }
+                              if (e.key === "Escape") setEditingProjectId(null);
+                            }}
+                            onBlur={() => {
+                              const trimmed = editProjectValue.trim();
+                              if (trimmed && trimmed !== project.name) onRenameProject(project.id, trimmed);
+                              setEditingProjectId(null);
+                            }}
+                            className="w-full bg-[#0A0A0B] border border-primary/40 rounded px-1.5 py-0.5 text-[11px] text-zinc-200 outline-none focus:border-primary/60"
+                            autoFocus
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-[11px] font-medium text-zinc-300 flex-1 truncate">{project.name}</span>
+                      )}
+
                       <span className="text-[9px] text-zinc-600">{projectSessions.length}</span>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onDeleteProject(project.id); }}
-                        className="w-4 h-4 flex items-center justify-center rounded text-zinc-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                      >
-                        <Trash2 className="w-2.5 h-2.5" />
-                      </button>
+
+                      {!isEditingProject && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingProjectId(project.id);
+                              setEditProjectValue(project.name);
+                            }}
+                            className="w-4 h-4 flex items-center justify-center rounded text-zinc-700 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                            title="Rename project"
+                          >
+                            <Pencil className="w-2.5 h-2.5" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onDeleteProject(project.id); }}
+                            className="w-4 h-4 flex items-center justify-center rounded text-zinc-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                            title="Delete project"
+                          >
+                            <Trash2 className="w-2.5 h-2.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
 
                     {/* Project sessions */}

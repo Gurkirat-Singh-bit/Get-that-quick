@@ -1,10 +1,12 @@
 // ── Templates service — CRUD for predefined LLM system prompts ───────────
 //
 // Templates are Markdown files with YAML frontmatter.
-// Storage: ~/.getthatquick/templates/local/*.md   (user-created)
-//          ~/.getthatquick/templates/community/*.md (remote repo, P2)
+// Storage: ~/.getthatquick/templates/local/<category>/<subcategory>/.../*.md
+//          ~/.getthatquick/templates/community/<category>/.../*.md
 //
-// The markdown body IS the system prompt — no variable interpolation.
+// Categories are hierarchical — the category string uses "/" as a separator
+// (e.g. "code/frontend") and maps to subdirectories on disk.
+// Legacy flat templates (no category subdirectory) are still supported.
 
 import {
   readFileSync,
@@ -12,8 +14,10 @@ import {
   existsSync,
   readdirSync,
   unlinkSync,
+  statSync,
+  mkdirSync,
 } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import matter from "gray-matter";
 import {
   getLocalTemplatesDir,
@@ -25,8 +29,8 @@ import type { Template, TemplateMeta } from "@shared/types";
 
 /** List all templates (local + community). Returns metadata only. */
 export function listTemplates(): TemplateMeta[] {
-  const local = readDir(getLocalTemplatesDir(), "local");
-  const community = readDir(getCommunityTemplatesDir(), "community");
+  const local = readDirRecursive(getLocalTemplatesDir(), "local");
+  const community = readDirRecursive(getCommunityTemplatesDir(), "community");
   return [...local, ...community].sort((a, b) =>
     a.title.localeCompare(b.title)
   );
@@ -35,16 +39,24 @@ export function listTemplates(): TemplateMeta[] {
 /** Get a single template by ID. Searches local first, then community. */
 export function getTemplate(id: string): Template | null {
   return (
-    findInDir(getLocalTemplatesDir(), id, "local") ??
-    findInDir(getCommunityTemplatesDir(), id, "community")
+    findRecursive(getLocalTemplatesDir(), id, "local") ??
+    findRecursive(getCommunityTemplatesDir(), id, "community")
   );
 }
 
 // ── Write (local only) ───────────────────────────────────────────────────
 
-/** Create a new local template. */
+/** Create a new local template. Uses its category to determine subdirectory. */
 export function createTemplate(tmpl: Template): Template {
-  writeToDisk(join(getLocalTemplatesDir(), `${tmpl.id}.md`), tmpl);
+  const categoryDir = tmpl.category
+    ? join(getLocalTemplatesDir(), ...tmpl.category.split("/").filter(Boolean))
+    : getLocalTemplatesDir();
+
+  if (!existsSync(categoryDir)) {
+    mkdirSync(categoryDir, { recursive: true });
+  }
+
+  writeToDisk(join(categoryDir, `${tmpl.id}.md`), tmpl);
   return tmpl;
 }
 
@@ -53,11 +65,10 @@ export function updateTemplate(
   id: string,
   updates: Partial<Template>
 ): Template | null {
-  const filePath = join(getLocalTemplatesDir(), `${id}.md`);
-  if (!existsSync(filePath)) return null;
+  const found = findRecursiveWithPath(getLocalTemplatesDir(), id, "local");
+  if (!found) return null;
 
-  const existing = readFile(filePath, "local");
-  if (!existing) return null;
+  const { template: existing, filePath: oldPath } = found;
 
   const merged: Template = {
     ...existing,
@@ -66,58 +77,116 @@ export function updateTemplate(
     source: "local",
     updatedAt: new Date().toISOString(),
   };
-  writeToDisk(filePath, merged);
+
+  // If category changed, move to new directory
+  const oldCategory = existing.category || "";
+  const newCategory = merged.category || "";
+
+  if (oldCategory !== newCategory) {
+    // Delete from old location
+    if (existsSync(oldPath)) unlinkSync(oldPath);
+
+    // Write to new category directory
+    const categoryDir = newCategory
+      ? join(getLocalTemplatesDir(), ...newCategory.split("/").filter(Boolean))
+      : getLocalTemplatesDir();
+
+    if (!existsSync(categoryDir)) {
+      mkdirSync(categoryDir, { recursive: true });
+    }
+
+    writeToDisk(join(categoryDir, `${id}.md`), merged);
+  } else {
+    writeToDisk(oldPath, merged);
+  }
+
   return merged;
 }
 
 /** Delete a local template. Returns true if it existed. */
 export function deleteTemplate(id: string): boolean {
-  const filePath = join(getLocalTemplatesDir(), `${id}.md`);
-  if (!existsSync(filePath)) return false;
-  unlinkSync(filePath);
+  const found = findRecursiveWithPath(getLocalTemplatesDir(), id, "local");
+  if (!found) return false;
+  unlinkSync(found.filePath);
   return true;
+}
+
+/** List all categories found across local and community templates. */
+export function listCategories(): string[] {
+  const all = listTemplates();
+  const cats = new Set<string>();
+  for (const t of all) {
+    if (t.category) cats.add(t.category);
+  }
+  return Array.from(cats).sort();
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────
 
-function readDir(
+/** Recursively read all .md files in a directory tree. */
+function readDirRecursive(
   dir: string,
   source: Template["source"]
 ): TemplateMeta[] {
   if (!existsSync(dir)) return [];
-  const files = readdirSync(dir).filter((f) => f.endsWith(".md"));
   const list: TemplateMeta[] = [];
 
-  for (const file of files) {
-    try {
-      const tmpl = readFile(join(dir, file), source);
-      if (tmpl) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { content: _, ...meta } = tmpl;
-        list.push(meta);
+  function walk(currentDir: string) {
+    const entries = readdirSync(currentDir);
+    for (const entry of entries) {
+      const fullPath = join(currentDir, entry);
+      const stat = statSync(fullPath);
+
+      if (stat.isDirectory()) {
+        walk(fullPath);
+      } else if (entry.endsWith(".md")) {
+        try {
+          const tmpl = readFile(fullPath, source, dir);
+          if (tmpl) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { content: _, ...meta } = tmpl;
+            list.push(meta);
+          }
+        } catch {
+          // skip corrupt files
+        }
       }
-    } catch {
-      // skip corrupt files
     }
   }
+
+  walk(dir);
   return list;
 }
 
+/** Read a single template file. Infers category from directory path if not in frontmatter. */
 function readFile(
   filePath: string,
-  source: Template["source"]
+  source: Template["source"],
+  rootDir?: string
 ): Template | null {
   try {
     const raw = readFileSync(filePath, "utf-8");
     const { data, content } = matter(raw);
+
+    // Infer category from the relative directory path if not set in YAML
+    let category = data.category ?? "";
+    if (!category && rootDir) {
+      const dir = filePath.substring(0, filePath.lastIndexOf("/"));
+      const rel = relative(rootDir, dir);
+      if (rel) category = rel;
+    }
+
     return {
       id: data.id ?? "",
       title: data.title ?? "",
       description: data.description ?? "",
-      category: data.category ?? "",
+      category,
       tags: data.tags ?? [],
       source,
       content: content.trim(),
+      author: data.author,
+      version: data.version,
+      variables: data.variables,
       createdAt: data.createdAt ?? new Date().toISOString(),
       updatedAt: data.updatedAt ?? new Date().toISOString(),
     };
@@ -126,18 +195,48 @@ function readFile(
   }
 }
 
-function findInDir(
+/** Recursively find a template by ID and return it. */
+function findRecursive(
   dir: string,
   id: string,
   source: Template["source"]
 ): Template | null {
-  const filePath = join(dir, `${id}.md`);
-  if (!existsSync(filePath)) return null;
-  return readFile(filePath, source);
+  const result = findRecursiveWithPath(dir, id, source);
+  return result?.template ?? null;
+}
+
+/** Recursively find a template by ID and return both template and file path. */
+function findRecursiveWithPath(
+  dir: string,
+  id: string,
+  source: Template["source"]
+): { template: Template; filePath: string } | null {
+  if (!existsSync(dir)) return null;
+
+  // Check direct file first (fast path)
+  const directPath = join(dir, `${id}.md`);
+  if (existsSync(directPath)) {
+    const tmpl = readFile(directPath, source, dir);
+    if (tmpl) return { template: tmpl, filePath: directPath };
+  }
+
+  // Recurse into subdirectories
+  const entries = readdirSync(dir);
+  for (const entry of entries) {
+    const fullPath = join(dir, entry);
+    const stat = statSync(fullPath);
+
+    if (stat.isDirectory()) {
+      const result = findRecursiveWithPath(fullPath, id, source);
+      if (result) return result;
+    }
+  }
+
+  return null;
 }
 
 function writeToDisk(filePath: string, tmpl: Template): void {
-  const frontmatter = {
+  const frontmatter: Record<string, unknown> = {
     id: tmpl.id,
     title: tmpl.title,
     description: tmpl.description,
@@ -146,6 +245,10 @@ function writeToDisk(filePath: string, tmpl: Template): void {
     createdAt: tmpl.createdAt,
     updatedAt: tmpl.updatedAt,
   };
+  if (tmpl.author) frontmatter.author = tmpl.author;
+  if (tmpl.version) frontmatter.version = tmpl.version;
+  if (tmpl.variables) frontmatter.variables = tmpl.variables;
+
   const md = matter.stringify(tmpl.content, frontmatter);
   writeFileSync(filePath, md, "utf-8");
 }

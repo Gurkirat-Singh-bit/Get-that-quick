@@ -12,6 +12,11 @@ templates.get("/", (c) => {
   return c.json({ ok: true, data: svc.listTemplates() });
 });
 
+// List all discovered categories
+templates.get("/categories", (c) => {
+  return c.json({ ok: true, data: svc.listCategories() });
+});
+
 // Get single template (full content)
 templates.get("/:id", (c) => {
   const tmpl = svc.getTemplate(c.req.param("id"));

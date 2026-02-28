@@ -8,11 +8,12 @@
  * @module components/chat/chat-area
  */
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { Sparkles, AlertTriangle } from "lucide-react";
-import { Message } from "@/components/chat/message";
+import { Message, parsePlanQuestions } from "@/components/chat/message";
+import type { PlanQuestion } from "@/components/chat/message";
 import { ChatInput } from "@/components/chat/chat-input";
-import type { Session, Settings } from "@shared/types";
+import type { Session, Settings, AttachedDocument } from "@shared/types";
 
 /** Props accepted by {@link ChatArea}. */
 interface ChatAreaProps {
@@ -28,8 +29,24 @@ interface ChatAreaProps {
   onSaveAsTemplate?: (content: string) => void;
   /** Current app settings — used to show config warnings. */
   settings: Settings | null;
+  /** Persist partial settings updates. */
+  onUpdateSettings: (updates: Partial<Settings>) => Promise<void>;
   /** Open the settings overlay. */
   onOpenSettings?: () => void;
+  /** Regenerate the last assistant response. */
+  onRegenerate?: () => void;
+  /** Expand the last assistant response. */
+  onExpand?: () => void;
+  /** Refine the last assistant response. */
+  onRefine?: () => void;
+  /** Attached documents for context. */
+  documents: AttachedDocument[];
+  /** Update attached documents. */
+  onDocumentsChange: (docs: AttachedDocument[]) => void;
+  /** Edit a message and re-generate assistant response. */
+  onEditMessage?: (messageId: string, newContent: string) => void;
+  /** Delete a message. */
+  onDeleteMessage?: (messageId: string) => void;
 }
 
 /**
@@ -44,7 +61,15 @@ export function ChatArea({
   onNewChat,
   onSaveAsTemplate,
   settings,
+  onUpdateSettings,
   onOpenSettings,
+  onRegenerate,
+  onExpand,
+  onRefine,
+  documents,
+  onDocumentsChange,
+  onEditMessage,
+  onDeleteMessage,
 }: ChatAreaProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -67,6 +92,18 @@ export function ChatArea({
     }
     await onSend(content);
   };
+
+  /** Extract plan questions from the last assistant message (if any). */
+  const planQuestions: PlanQuestion[] = useMemo(() => {
+    if (!session || session.messages.length === 0 || generating) return [];
+    // Find the last assistant message
+    const lastAssistant = [...session.messages].reverse().find((m) => m.role === "assistant");
+    if (!lastAssistant) return [];
+    const segments = parsePlanQuestions(lastAssistant.content);
+    return segments
+      .filter((s): s is { type: "question"; data: PlanQuestion } => s.type === "question")
+      .map((s) => s.data);
+  }, [session?.messages, generating]);
 
   return (
     <div className="flex-1 flex flex-col min-w-0 h-full">
@@ -128,17 +165,30 @@ export function ChatArea({
           </div>
         ) : (
           <div className="max-w-3xl mx-auto px-6 py-6">
-            {session.messages.map((msg, i) => (
-              <div key={msg.id}>
-                <Message
-                  message={{ id: msg.id, role: msg.role, content: msg.content }}
-                  onSaveAsTemplate={msg.role === "assistant" ? onSaveAsTemplate : undefined}
-                />
-                {i < session.messages.length - 1 && msg.role === "assistant" && (
-                  <div className="border-t border-[#E2E4E9] my-1" />
-                )}
-              </div>
-            ))}
+            {session.messages.map((msg, i) => {
+              // Determine if this is the last assistant message
+              const isLastAssistant =
+                msg.role === "assistant" &&
+                session.messages.slice(i + 1).every((m) => m.role !== "assistant");
+
+              return (
+                <div key={msg.id}>
+                  <Message
+                    message={{ id: msg.id, role: msg.role, content: msg.content }}
+                    onSaveAsTemplate={msg.role === "assistant" ? onSaveAsTemplate : undefined}
+                    onRegenerate={onRegenerate}
+                    onExpand={onExpand}
+                    onRefine={onRefine}
+                    isLastAssistant={isLastAssistant}
+                    onEdit={onEditMessage}
+                    onDelete={onDeleteMessage}
+                  />
+                  {i < session.messages.length - 1 && msg.role === "assistant" && (
+                    <div className="border-t border-[#E2E4E9] my-1" />
+                  )}
+                </div>
+              );
+            })}
 
             {/* Streaming indicator */}
             {generating && (
@@ -158,7 +208,19 @@ export function ChatArea({
       </div>
 
       {/* Input — always pinned at bottom */}
-      <ChatInput onSend={handleSend} disabled={generating} />
+      <ChatInput
+        onSend={handleSend}
+        disabled={generating}
+        documents={documents}
+        onDocumentsChange={onDocumentsChange}
+        planMode={settings?.ai?.planMode ?? false}
+        onTogglePlanMode={() => {
+          if (settings) {
+            onUpdateSettings({ ai: { ...settings.ai, planMode: !settings.ai.planMode } });
+          }
+        }}
+        planQuestions={planQuestions}
+      />
     </div>
   );
 }

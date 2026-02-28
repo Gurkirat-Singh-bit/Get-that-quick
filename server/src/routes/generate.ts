@@ -6,7 +6,7 @@
 
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
-import { generateStream, generate } from "../services/llm";
+import { generateStream, generate, listProviderModels } from "../services/llm";
 import type { GenerateRequest } from "@shared/types";
 
 const generateRoute = new Hono();
@@ -24,7 +24,11 @@ generateRoute.post("/", async (c) => {
   // ── Non-streaming ──
   if (!body.stream) {
     try {
-      const content = await generate(body.systemPrompt, body.messages);
+      const content = await generate(body.systemPrompt, body.messages, {
+        temperature: body.temperature,
+        maxTokens: body.maxTokens,
+        thinkingEnabled: body.thinkingEnabled,
+      });
       return c.json({ ok: true, data: { content } });
     } catch (err: any) {
       return c.json({ ok: false, error: err.message ?? String(err) }, 500);
@@ -36,7 +40,12 @@ generateRoute.post("/", async (c) => {
     try {
       for await (const chunk of generateStream(
         body.systemPrompt,
-        body.messages
+        body.messages,
+        {
+          temperature: body.temperature,
+          maxTokens: body.maxTokens,
+          thinkingEnabled: body.thinkingEnabled,
+        }
       )) {
         await stream.writeSSE({ data: JSON.stringify({ content: chunk }) });
       }
@@ -48,6 +57,17 @@ generateRoute.post("/", async (c) => {
       });
     }
   });
+});
+
+// List available models from a configured provider
+generateRoute.get("/models/:provider", async (c) => {
+  const provider = c.req.param("provider");
+  try {
+    const models = await listProviderModels(provider);
+    return c.json({ ok: true, data: models });
+  } catch (err: any) {
+    return c.json({ ok: false, error: err.message ?? String(err) }, 500);
+  }
 });
 
 export default generateRoute;

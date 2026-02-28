@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Search, FileCode2, Globe, Plus, Trash2, Sparkles, FolderOpen, LayoutTemplate, Pencil, Tag, ChevronDown, X } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Search, FileCode2, Globe, Plus, Trash2, Sparkles, FolderOpen, LayoutTemplate, Pencil, Tag, ChevronDown, ChevronRight, X, Folder } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { TemplateMeta, Template } from "@shared/types";
 import type { TemplateFilter } from "@/components/layout/right-icon-rail";
@@ -31,6 +31,182 @@ const filterIcons: Record<TemplateFilter, React.ReactNode> = {
 
 const DEFAULT_CATEGORIES = ["general", "development", "communication", "writing", "data", "design"];
 
+// ── Category tree helpers ─────────────────────────────────────────────────
+
+interface CategoryNode {
+  /** Segment name (e.g. "frontend"). */
+  name: string;
+  /** Full slash-separated path (e.g. "code/frontend"). */
+  path: string;
+  /** Child categories. */
+  children: CategoryNode[];
+  /** Templates directly in this category. */
+  templates: TemplateMeta[];
+}
+
+/** Build a tree of categories from a flat list of templates. */
+function buildCategoryTree(templates: TemplateMeta[]): CategoryNode {
+  const root: CategoryNode = { name: "", path: "", children: [], templates: [] };
+
+  for (const tmpl of templates) {
+    const cat = tmpl.category || "uncategorized";
+    const segments = cat.split("/").filter(Boolean);
+
+    let node = root;
+    let pathSoFar = "";
+
+    for (const seg of segments) {
+      pathSoFar = pathSoFar ? `${pathSoFar}/${seg}` : seg;
+      let child = node.children.find((c) => c.name === seg);
+      if (!child) {
+        child = { name: seg, path: pathSoFar, children: [], templates: [] };
+        node.children.push(child);
+      }
+      node = child;
+    }
+    node.templates.push(tmpl);
+  }
+
+  // Sort children alphabetically at every level
+  function sortTree(n: CategoryNode) {
+    n.children.sort((a, b) => a.name.localeCompare(b.name));
+    n.templates.sort((a, b) => a.title.localeCompare(b.title));
+    for (const c of n.children) sortTree(c);
+  }
+  sortTree(root);
+
+  return root;
+}
+
+/** Count total templates in a node (including descendants). */
+function countTemplates(node: CategoryNode): number {
+  return node.templates.length + node.children.reduce((sum, c) => sum + countTemplates(c), 0);
+}
+
+// ── Category folder component ─────────────────────────────────────────────
+
+interface CategoryFolderProps {
+  node: CategoryNode;
+  depth: number;
+  expandedFolders: Set<string>;
+  onToggleFolder: (path: string) => void;
+  onEditTemplate?: (id: string) => void;
+  onDeleteTemplate: (id: string) => Promise<void>;
+  source: "local" | "community";
+  onCreateInCategory?: (category: string) => void;
+}
+
+function CategoryFolder({
+  node,
+  depth,
+  expandedFolders,
+  onToggleFolder,
+  onEditTemplate,
+  onDeleteTemplate,
+  source,
+  onCreateInCategory,
+}: CategoryFolderProps) {
+  const isExpanded = expandedFolders.has(node.path);
+  const total = countTemplates(node);
+
+  return (
+    <div>
+      {/* Folder header */}
+      <button
+        onClick={() => onToggleFolder(node.path)}
+        className="w-full flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-left hover:bg-white/4 transition-colors group"
+        style={{ paddingLeft: `${12 + depth * 12}px` }}
+      >
+        {isExpanded ? (
+          <ChevronDown className="w-3 h-3 text-zinc-600 shrink-0" />
+        ) : (
+          <ChevronRight className="w-3 h-3 text-zinc-600 shrink-0" />
+        )}
+        <Folder className="w-3 h-3 text-zinc-500 group-hover:text-primary/70 shrink-0" />
+        <span className="text-[11px] text-zinc-400 group-hover:text-zinc-200 truncate flex-1 capitalize">
+          {node.name}
+        </span>
+        <span className="text-[9px] text-zinc-600 bg-white/3 px-1 py-0.5 rounded shrink-0">{total}</span>
+        {source === "local" && onCreateInCategory && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCreateInCategory(node.path);
+            }}
+            className="w-4 h-4 flex items-center justify-center rounded text-zinc-600 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            title={`Create template in ${node.path}`}
+          >
+            <Plus className="w-2.5 h-2.5" />
+          </button>
+        )}
+      </button>
+
+      {/* Children */}
+      {isExpanded && (
+        <div>
+          {/* Sub-folders */}
+          {node.children.map((child) => (
+            <CategoryFolder
+              key={child.path}
+              node={child}
+              depth={depth + 1}
+              expandedFolders={expandedFolders}
+              onToggleFolder={onToggleFolder}
+              onEditTemplate={onEditTemplate}
+              onDeleteTemplate={onDeleteTemplate}
+              source={source}
+              onCreateInCategory={onCreateInCategory}
+            />
+          ))}
+
+          {/* Templates in this category */}
+          {node.templates.map((t) => (
+            <div
+              key={t.id}
+              className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors"
+              style={{ paddingLeft: `${24 + depth * 12}px` }}
+            >
+              {source === "community" ? (
+                <Globe className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
+              ) : (
+                <FileCode2 className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                <span className="text-xs text-zinc-300 group-hover:text-white truncate block">{t.title}</span>
+                {t.description && (
+                  <span className="text-[10px] text-zinc-600 truncate block">{t.description}</span>
+                )}
+              </div>
+              {source === "local" && (
+                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  {onEditTemplate && (
+                    <button
+                      onClick={() => onEditTemplate(t.id)}
+                      className="w-5 h-5 flex items-center justify-center rounded text-zinc-600 hover:text-primary"
+                      title="Edit template"
+                    >
+                      <Pencil className="w-2.5 h-2.5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => onDeleteTemplate(t.id)}
+                    className="w-5 h-5 flex items-center justify-center rounded text-zinc-600 hover:text-red-400"
+                    title="Delete template"
+                  >
+                    <Trash2 className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main sidebar ──────────────────────────────────────────────────────────
+
 export function RightSidebar({
   community,
   local,
@@ -49,11 +225,23 @@ export function RightSidebar({
   const [newCategory, setNewCategory] = useState("general");
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [customCategory, setCustomCategory] = useState("");
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
-  // Derive existing categories from local templates
-  const existingCategories = Array.from(
-    new Set([...DEFAULT_CATEGORIES, ...local.map((t) => t.category).filter(Boolean)])
-  );
+  // Derive existing categories from all templates
+  const existingCategories = useMemo(() => {
+    const cats = new Set(DEFAULT_CATEGORIES);
+    for (const t of [...local, ...community]) {
+      if (t.category) {
+        cats.add(t.category);
+        // Also add parent segments (e.g. "code" from "code/frontend")
+        const parts = t.category.split("/");
+        for (let i = 1; i < parts.length; i++) {
+          cats.add(parts.slice(0, i).join("/"));
+        }
+      }
+    }
+    return Array.from(cats).sort();
+  }, [local, community]);
 
   // Handle external create trigger
   useEffect(() => {
@@ -81,19 +269,66 @@ export function RightSidebar({
       newDescription.trim() || undefined,
       category
     );
+    // Auto-expand the created category folder
+    if (category) {
+      const parts = category.split("/");
+      const newExpanded = new Set(expandedFolders);
+      for (let i = 1; i <= parts.length; i++) {
+        newExpanded.add(parts.slice(0, i).join("/"));
+      }
+      setExpandedFolders(newExpanded);
+    }
     resetCreateForm();
   };
 
+  const handleCreateInCategory = (category: string) => {
+    setNewCategory(category);
+    setCustomCategory("");
+    setIsCreating(true);
+  };
+
+  const toggleFolder = (path: string) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  };
+
+  // Filter templates by search
   const filteredCommunity = community.filter(
-    (t) => !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase())
+    (t) => !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredLocal = local.filter(
-    (t) => !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase())
+    (t) => !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Build category trees
+  const communityTree = useMemo(() => buildCategoryTree(filteredCommunity), [filteredCommunity]);
+  const localTree = useMemo(() => buildCategoryTree(filteredLocal), [filteredLocal]);
 
   const showCommunity = filter === "all" || filter === "community";
   const showLocal = filter === "all" || filter === "local";
+
+  // When searching, expand all folders
+  useEffect(() => {
+    if (searchQuery) {
+      const allPaths = new Set<string>();
+      const collectPaths = (node: CategoryNode) => {
+        if (node.path) allPaths.add(node.path);
+        node.children.forEach(collectPaths);
+      };
+      collectPaths(communityTree);
+      collectPaths(localTree);
+      setExpandedFolders(allPaths);
+    }
+  }, [searchQuery, communityTree, localTree]);
 
   return (
     <div className="w-72 h-full flex flex-col bg-[#0E0E10] text-zinc-300 border-l border-[#1A1A1E]">
@@ -156,23 +391,37 @@ export function RightSidebar({
                   </p>
                 </div>
               )}
-              <div className="space-y-0.5">
-                {filteredCommunity.map((t) => (
-                  <button
-                    key={t.id}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-[11px] text-zinc-400 hover:bg-white/4 hover:text-zinc-200 transition-colors group"
-                  >
-                    <Globe className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs text-zinc-300 group-hover:text-white truncate block">{t.title}</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-zinc-600 truncate">{t.description}</span>
-                        <span className="text-[9px] text-zinc-700 bg-white/3 px-1 py-0.5 rounded shrink-0">{t.category}</span>
+              {!loading && filteredCommunity.length > 0 && (
+                <div>
+                  {/* Render category tree for community */}
+                  {communityTree.children.map((child) => (
+                    <CategoryFolder
+                      key={child.path}
+                      node={child}
+                      depth={0}
+                      expandedFolders={expandedFolders}
+                      onToggleFolder={toggleFolder}
+                      onDeleteTemplate={onDeleteTemplate}
+                      source="community"
+                    />
+                  ))}
+                  {/* Templates at root level (no category) */}
+                  {communityTree.templates.map((t) => (
+                    <div
+                      key={t.id}
+                      className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors"
+                    >
+                      <Globe className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs text-zinc-300 group-hover:text-white truncate block">{t.title}</span>
+                        {t.description && (
+                          <span className="text-[10px] text-zinc-600 truncate block">{t.description}</span>
+                        )}
                       </div>
                     </div>
-                  </button>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -194,7 +443,7 @@ export function RightSidebar({
                 </button>
               </div>
 
-              {/* Create Form — improved with name, description, category */}
+              {/* Create Form — with hierarchical category picker */}
               {isCreating && (
                 <div className="mx-2 mb-3 bg-[#0A0A0B] rounded-lg p-3 border border-[#1A1A1E] space-y-2">
                   <div className="flex items-center justify-between mb-1">
@@ -230,7 +479,7 @@ export function RightSidebar({
                     className="w-full bg-[#141416] border border-[#1A1A1E] rounded-md px-2.5 py-1.5 text-xs text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/30"
                   />
 
-                  {/* Category selector */}
+                  {/* Category selector with hierarchy */}
                   <div className="relative">
                     <button
                       onClick={() => setShowCategoryPicker(!showCategoryPicker)}
@@ -238,14 +487,14 @@ export function RightSidebar({
                     >
                       <span className="flex items-center gap-1.5">
                         <Tag className="w-3 h-3" />
-                        {customCategory || newCategory}
+                        <span className="truncate">{customCategory || newCategory}</span>
                       </span>
-                      <ChevronDown className="w-3 h-3" />
+                      <ChevronDown className="w-3 h-3 shrink-0" />
                     </button>
 
                     {showCategoryPicker && (
                       <div className="absolute z-10 top-full mt-1 left-0 right-0 bg-[#141416] border border-[#1A1A1E] rounded-lg shadow-xl overflow-hidden">
-                        <div className="max-h-32 overflow-y-auto">
+                        <div className="max-h-40 overflow-y-auto">
                           {existingCategories.map((cat) => (
                             <button
                               key={cat}
@@ -254,11 +503,12 @@ export function RightSidebar({
                                 setCustomCategory("");
                                 setShowCategoryPicker(false);
                               }}
-                              className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-white/5 transition-colors ${
+                              className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-white/5 transition-colors flex items-center gap-1.5 ${
                                 newCategory === cat && !customCategory ? "text-primary" : "text-zinc-400"
                               }`}
                             >
-                              {cat}
+                              <Folder className="w-3 h-3 shrink-0" />
+                              <span className="truncate">{cat}</span>
                             </button>
                           ))}
                         </div>
@@ -267,7 +517,7 @@ export function RightSidebar({
                             type="text"
                             value={customCategory}
                             onChange={(e) => setCustomCategory(e.target.value)}
-                            placeholder="+ New category..."
+                            placeholder="+ New category (e.g. code/frontend)"
                             className="w-full bg-transparent text-[11px] text-zinc-300 placeholder:text-zinc-600 outline-none"
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && customCategory.trim()) {
@@ -316,41 +566,57 @@ export function RightSidebar({
                 </div>
               )}
 
-              <div className="space-y-0.5">
-                {filteredLocal.map((t) => (
-                  <div
-                    key={t.id}
-                    className="group flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/4 transition-colors"
-                  >
-                    <FileCode2 className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs text-zinc-300 group-hover:text-white truncate block">{t.title}</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-zinc-600 truncate">{t.description}</span>
-                        <span className="text-[9px] text-zinc-700 bg-white/3 px-1 py-0.5 rounded shrink-0">{t.category}</span>
+              {!loading && filteredLocal.length > 0 && (
+                <div>
+                  {/* Render category tree for local */}
+                  {localTree.children.map((child) => (
+                    <CategoryFolder
+                      key={child.path}
+                      node={child}
+                      depth={0}
+                      expandedFolders={expandedFolders}
+                      onToggleFolder={toggleFolder}
+                      onEditTemplate={onEditTemplate}
+                      onDeleteTemplate={onDeleteTemplate}
+                      source="local"
+                      onCreateInCategory={handleCreateInCategory}
+                    />
+                  ))}
+                  {/* Templates at root level (no category) */}
+                  {localTree.templates.map((t) => (
+                    <div
+                      key={t.id}
+                      className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors"
+                    >
+                      <FileCode2 className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs text-zinc-300 group-hover:text-white truncate block">{t.title}</span>
+                        {t.description && (
+                          <span className="text-[10px] text-zinc-600 truncate block">{t.description}</span>
+                        )}
+                      </div>
+                      <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                        {onEditTemplate && (
+                          <button
+                            onClick={() => onEditTemplate(t.id)}
+                            className="w-5 h-5 flex items-center justify-center rounded text-zinc-600 hover:text-primary"
+                            title="Edit template"
+                          >
+                            <Pencil className="w-2.5 h-2.5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => onDeleteTemplate(t.id)}
+                          className="w-5 h-5 flex items-center justify-center rounded text-zinc-600 hover:text-red-400"
+                          title="Delete template"
+                        >
+                          <Trash2 className="w-2.5 h-2.5" />
+                        </button>
                       </div>
                     </div>
-                    <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                      {onEditTemplate && (
-                        <button
-                          onClick={() => onEditTemplate(t.id)}
-                          className="w-5 h-5 flex items-center justify-center rounded text-zinc-600 hover:text-primary"
-                          title="Edit template"
-                        >
-                          <Pencil className="w-2.5 h-2.5" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => onDeleteTemplate(t.id)}
-                        className="w-5 h-5 flex items-center justify-center rounded text-zinc-600 hover:text-red-400"
-                        title="Delete template"
-                      >
-                        <Trash2 className="w-2.5 h-2.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -150,15 +150,32 @@ export interface AIProviderConfig {
   baseUrl: string;
 }
 
+/** AI-specific settings sub-object. */
+export interface AISettings {
+  /** Name of the currently active provider. */
+  provider: string;
+  /** Map of provider name → config. */
+  providers: Record<string, AIProviderConfig>;
+  /** Default system prompt for new chats. */
+  systemPrompt?: string;
+  /** Sampling temperature (0–2). */
+  temperature?: number;
+  /** Max tokens to generate (0 = provider default). */
+  maxTokens?: number;
+  /** Enable thinking/reasoning model support. */
+  thinkingEnabled?: boolean;
+  /** Enable plan mode — AI outlines a plan before responding. */
+  planMode?: boolean;
+  /** Positive prompt — additional instructions to emphasize. */
+  positivePrompt?: string;
+  /** Negative prompt — things to avoid or exclude. */
+  negativePrompt?: string;
+}
+
 /** Application-wide settings persisted on disk. */
 export interface Settings {
   /** AI / LLM configuration. */
-  ai: {
-    /** Name of the currently active provider. */
-    provider: string;
-    /** Map of provider name → config. */
-    providers: Record<string, AIProviderConfig>;
-  };
+  ai: AISettings;
   /** Speech-to-text configuration. */
   stt: {
     /** Active Vosk model identifier. */
@@ -195,6 +212,22 @@ export interface STTError {
   message: string;
 }
 
+// ── Documents ─────────────────────────────────────────────────────────────
+
+/** An attached document included as context in a chat. */
+export interface AttachedDocument {
+  /** Unique document identifier. */
+  id: string;
+  /** Original file name. */
+  name: string;
+  /** MIME type of the file. */
+  type: string;
+  /** Text content of the file. */
+  content: string;
+  /** File size in bytes. */
+  size: number;
+}
+
 // ── Generate API ──────────────────────────────────────────────────────────
 
 /** Request body for the /api/generate endpoint. */
@@ -205,6 +238,12 @@ export interface GenerateRequest {
   messages: { role: "user" | "assistant"; content: string }[];
   /** Whether to stream the response via SSE. */
   stream?: boolean;
+  /** Sampling temperature. */
+  temperature?: number;
+  /** Max tokens to generate. */
+  maxTokens?: number;
+  /** Enable thinking/extended reasoning. */
+  thinkingEnabled?: boolean;
 }
 
 // ── API response wrappers ─────────────────────────────────────────────────

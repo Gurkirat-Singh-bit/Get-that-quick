@@ -8,7 +8,7 @@
  * @module components/settings/settings-overlay
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { X, SlidersHorizontal, HardDrive, Info, LayoutTemplate, ChevronRight, BrainCircuit, Github, BookOpen, Plus, Trash2, ExternalLink, Check, Globe, FileCode2, Download, Upload, AlertTriangle, Mic, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { accentPresets, getAccent, setAccent } from "@/lib/accent";
@@ -199,17 +199,17 @@ function GeneralSettings({ settings, onUpdateSettings }: { settings?: SettingsTy
               ))}
             </select>
             {activeConfig && (
-              <input
-                type="text"
-                defaultValue={activeConfig.model}
-                onBlur={async (e) => {
+              <ModelSelect
+                providerName={activeProvider}
+                value={activeConfig.model}
+                onChange={async (v) => {
                   if (onUpdateSettings && settings) {
-                    const updated = { ...providers, [activeProvider]: { ...activeConfig, model: e.target.value } };
+                    const updated = { ...providers, [activeProvider]: { ...activeConfig, model: v } };
                     await onUpdateSettings({ ai: { ...settings.ai, providers: updated } });
                   }
                 }}
-                placeholder="Model name (e.g. gpt-4o, claude-3.5-sonnet)"
                 className="w-full bg-[#0A0A0B] border border-[#1E1E22] rounded-lg py-2 px-3 text-xs text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/40"
+                placeholder="Model name (e.g. gpt-4o, claude-3.5-sonnet)"
               />
             )}
           </div>
@@ -267,6 +267,82 @@ function TemplateSettings() {
   );
 }
 
+/**
+ * Dropdown that fetches available models from a provider's API.
+ * Falls back to a text input if the fetch fails or returns empty.
+ */
+function ModelSelect({
+  providerName,
+  value,
+  onChange,
+  className,
+  placeholder = "Model",
+}: {
+  providerName: string;
+  value: string;
+  onChange: (model: string) => void;
+  className?: string;
+  placeholder?: string;
+}) {
+  const [models, setModels] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const fetchModels = useCallback(async () => {
+    if (!providerName) return;
+    setLoading(true);
+    setFailed(false);
+    try {
+      const list = await api.listProviderModels(providerName);
+      setModels(list);
+    } catch {
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [providerName]);
+
+  useEffect(() => {
+    fetchModels();
+  }, [fetchModels]);
+
+  const base = className ?? "w-full bg-[#161618] border border-[#1A1A1E] rounded-md py-1.5 px-2.5 text-[11px] text-zinc-400 outline-none focus:border-primary/40";
+
+  if (loading) {
+    return (
+      <div className={cn(base, "flex items-center gap-1.5 text-zinc-600")}>
+        <Loader2 className="w-3 h-3 animate-spin" />
+        Loading models…
+      </div>
+    );
+  }
+
+  if (failed || models.length === 0) {
+    return (
+      <input
+        type="text"
+        defaultValue={value}
+        onBlur={(e) => onChange(e.target.value)}
+        className={base}
+        placeholder={placeholder}
+      />
+    );
+  }
+
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={cn(base, "cursor-pointer")}
+    >
+      {!value && <option value="">Select a model…</option>}
+      {models.map((m) => (
+        <option key={m.id} value={m.id}>{m.name || m.id}</option>
+      ))}
+    </select>
+  );
+}
+
 /** Props for model settings sub-component. */
 interface ModelSettingsProps {
   settings: SettingsType | null;
@@ -280,6 +356,7 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
   const [newUrl, setNewUrl] = useState("");
   const [testing, setTesting] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, boolean | null>>({});
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
   const providers = settings?.ai?.providers ?? {};
   const activeProvider = settings?.ai?.provider ?? "";
@@ -289,7 +366,7 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
     const updated = { ...providers };
     delete updated[name];
     const newActive = activeProvider === name ? Object.keys(updated)[0] || "" : activeProvider;
-    await onUpdateSettings({ ai: { provider: newActive, providers: updated } });
+    await onUpdateSettings({ ai: { ...settings!.ai, provider: newActive, providers: updated } });
   };
 
   /** Add a provider (from preset or manual). */
@@ -300,7 +377,7 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
       [name.trim()]: { apiKey: "", model: "", baseUrl: baseUrl.trim() },
     };
     const active = activeProvider || name.trim();
-    await onUpdateSettings({ ai: { provider: active, providers: updated } });
+    await onUpdateSettings({ ai: { ...settings!.ai, provider: active, providers: updated } });
     setNewName("");
     setNewUrl("");
     setShowPresets(false);
@@ -398,72 +475,93 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
 
         {/* Existing providers */}
         <div className="space-y-2">
-          {Object.entries(providers).map(([name, config]) => (
-            <div key={name} className="bg-[#0A0A0B] rounded-lg px-3 py-3 border border-[#1E1E22]">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <BrainCircuit className="w-3.5 h-3.5 text-zinc-500" />
-                  <span className="text-xs text-zinc-300 font-medium">{name}</span>
-                  {activeProvider === name && (
-                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wide bg-emerald-500/10 text-emerald-400">
-                      active
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  {activeProvider !== name && (
-                    <button
-                      onClick={() => handleSetActive(name)}
-                      className="text-[10px] text-primary hover:underline mr-1"
-                    >
-                      Activate
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleTest(name, config)}
-                    disabled={testing !== null}
-                    className={cn(
-                      "text-[10px] transition-colors mr-1",
-                      testResults[name] === true ? "text-emerald-400" :
-                      testResults[name] === false ? "text-red-400" :
-                      "text-zinc-500 hover:text-primary"
+          {Object.entries(providers).map(([name, config]) => {
+            const isExpanded = expandedCard === name;
+            return (
+              <div key={name} className="bg-[#0A0A0B] rounded-lg border border-[#1E1E22]">
+                {/* Collapsed header — always visible */}
+                <div
+                  className="flex items-center justify-between px-3 py-2.5 cursor-pointer"
+                  onClick={() => setExpandedCard(isExpanded ? null : name)}
+                >
+                  <div className="flex items-center gap-2">
+                    <BrainCircuit className="w-3.5 h-3.5 text-zinc-500" />
+                    <span className="text-xs text-zinc-300 font-medium">{name}</span>
+                    {activeProvider === name && (
+                      <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wide bg-emerald-500/10 text-emerald-400">
+                        active
+                      </span>
                     )}
-                  >
-                    {testing === name ? "Testing..." : testResults[name] === true ? "Connected" : testResults[name] === false ? "Failed" : "Test"}
-                  </button>
-                  <button
-                    onClick={() => handleRemoveProvider(name)}
-                    className="w-6 h-6 flex items-center justify-center rounded text-zinc-600 hover:text-red-400 transition-colors"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
+                    {config.model && (
+                      <span className="text-[10px] text-zinc-600">{config.model}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {activeProvider !== name && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleSetActive(name); }}
+                        className="text-[10px] text-primary hover:underline mr-1"
+                      >
+                        Activate
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleTest(name, config); }}
+                      disabled={testing !== null}
+                      className={cn(
+                        "text-[10px] transition-colors mr-1",
+                        testResults[name] === true ? "text-emerald-400" :
+                        testResults[name] === false ? "text-red-400" :
+                        "text-zinc-500 hover:text-primary"
+                      )}
+                    >
+                      {testing === name ? "Testing..." : testResults[name] === true ? "Connected" : testResults[name] === false ? "Failed" : "Test"}
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleRemoveProvider(name); }}
+                      className="w-6 h-6 flex items-center justify-center rounded text-zinc-600 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                    <ChevronRight className={cn(
+                      "w-3 h-3 text-zinc-600 transition-transform",
+                      isExpanded && "rotate-90"
+                    )} />
+                  </div>
                 </div>
+
+                {/* Expanded form fields */}
+                {isExpanded && (
+                  <div className="px-3 pb-3 pt-1 border-t border-[#1E1E22]">
+                    <input
+                      type="text"
+                      defaultValue={config.baseUrl}
+                      onBlur={(e) => handleUpdateProviderField(name, "baseUrl", e.target.value)}
+                      className="w-full bg-[#161618] border border-[#1A1A1E] rounded-md py-1.5 px-2.5 text-[11px] text-zinc-400 outline-none focus:border-primary/40 mb-1.5"
+                      placeholder="Base URL"
+                    />
+                    <div className="flex gap-1.5">
+                      <input
+                        type="password"
+                        defaultValue={config.apiKey}
+                        onBlur={(e) => handleUpdateProviderField(name, "apiKey", e.target.value)}
+                        className="flex-1 bg-[#161618] border border-[#1A1A1E] rounded-md py-1.5 px-2.5 text-[11px] text-zinc-400 outline-none focus:border-primary/40"
+                        placeholder="API Key (optional for local)"
+                      />
+                      <div className="flex-1">
+                        <ModelSelect
+                          providerName={name}
+                          value={config.model}
+                          onChange={(v) => handleUpdateProviderField(name, "model", v)}
+                          placeholder="Model (e.g. gpt-4o)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <input
-                type="text"
-                defaultValue={config.baseUrl}
-                onBlur={(e) => handleUpdateProviderField(name, "baseUrl", e.target.value)}
-                className="w-full bg-[#161618] border border-[#1A1A1E] rounded-md py-1.5 px-2.5 text-[11px] text-zinc-400 outline-none focus:border-primary/40 mb-1.5"
-                placeholder="Base URL"
-              />
-              <div className="flex gap-1.5">
-                <input
-                  type="password"
-                  defaultValue={config.apiKey}
-                  onBlur={(e) => handleUpdateProviderField(name, "apiKey", e.target.value)}
-                  className="flex-1 bg-[#161618] border border-[#1A1A1E] rounded-md py-1.5 px-2.5 text-[11px] text-zinc-400 outline-none focus:border-primary/40"
-                  placeholder="API Key (optional for local)"
-                />
-                <input
-                  type="text"
-                  defaultValue={config.model}
-                  onBlur={(e) => handleUpdateProviderField(name, "model", e.target.value)}
-                  className="flex-1 bg-[#161618] border border-[#1A1A1E] rounded-md py-1.5 px-2.5 text-[11px] text-zinc-400 outline-none focus:border-primary/40"
-                  placeholder="Model (e.g. gpt-4o)"
-                />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {Object.keys(providers).length === 0 && !showPresets && (
@@ -478,6 +576,72 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
             </button>
           </div>
         )}
+      </div>
+
+      {/* Generation Settings */}
+      <div className="border-t border-[#1E1E22] pt-6">
+        <h3 className="text-sm font-semibold text-white mb-1">Generation Settings</h3>
+        <p className="text-xs text-zinc-500 mb-3">System prompt, temperature, and token settings</p>
+
+        {/* System Prompt */}
+        <div className="mb-4">
+          <label className="text-xs text-zinc-400 mb-1.5 block">System Prompt</label>
+          <textarea
+            rows={4}
+            value={settings?.ai?.systemPrompt ?? ""}
+            onChange={(e) => {
+              if (onUpdateSettings && settings) {
+                onUpdateSettings({ ai: { ...settings.ai, systemPrompt: e.target.value } });
+              }
+            }}
+            className="w-full bg-[#0A0A0B] border border-[#1E1E22] rounded-lg py-2 px-3 text-[11px] text-zinc-300 outline-none focus:border-primary/40 resize-y leading-relaxed"
+            placeholder="You are a helpful assistant..."
+          />
+          <p className="text-[10px] text-zinc-600 mt-1">Templates override this per-session.</p>
+        </div>
+
+        {/* Temperature */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs text-zinc-400">Temperature</label>
+            <span className="text-xs text-primary font-mono">{(settings?.ai?.temperature ?? 0.7).toFixed(1)}</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="2"
+            step="0.1"
+            value={settings?.ai?.temperature ?? 0.7}
+            onChange={(e) => {
+              if (onUpdateSettings && settings) {
+                onUpdateSettings({ ai: { ...settings.ai, temperature: parseFloat(e.target.value) } });
+              }
+            }}
+            className="w-full h-1 bg-[#1E1E22] rounded-lg appearance-none cursor-pointer accent-primary"
+          />
+          <div className="flex justify-between mt-0.5">
+            <span className="text-[9px] text-zinc-700">Precise</span>
+            <span className="text-[9px] text-zinc-700">Creative</span>
+          </div>
+        </div>
+
+        {/* Max Output Tokens */}
+        <div>
+          <label className="text-xs text-zinc-400 mb-1 block">Max Output Tokens</label>
+          <input
+            type="number"
+            min="0"
+            step="256"
+            value={settings?.ai?.maxTokens ?? 0}
+            onChange={(e) => {
+              if (onUpdateSettings && settings) {
+                onUpdateSettings({ ai: { ...settings.ai, maxTokens: parseInt(e.target.value) || 0 } });
+              }
+            }}
+            className="w-full bg-[#0A0A0B] border border-[#1E1E22] rounded-lg py-2 px-3 text-xs text-zinc-300 outline-none focus:border-primary/40"
+            placeholder="0 = model default"
+          />
+        </div>
       </div>
 
       <div className="border-t border-[#1E1E22] pt-6">
@@ -538,8 +702,8 @@ function BackupSettings() {
 function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType | null; onUpdateSettings?: (u: Partial<SettingsType>) => Promise<void> }) {
   const [models, setModels] = useState<VoskModelInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [downloading, setDownloading] = useState<string | null>(null);
-  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloading, setDownloading] = useState<Set<string>>(new Set());
+  const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -553,16 +717,18 @@ function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType
   useEffect(() => { refreshModels(); }, []);
 
   const handleDownload = async (id: string) => {
-    setDownloading(id);
-    setDownloadProgress(0);
+    setDownloading((prev) => new Set(prev).add(id));
+    setDownloadProgress((prev) => ({ ...prev, [id]: 0 }));
     setError(null);
     try {
-      await api.downloadModel(id, (info) => setDownloadProgress(info.percent));
+      await api.downloadModel(id, (info) =>
+        setDownloadProgress((prev) => ({ ...prev, [id]: info.percent }))
+      );
       refreshModels();
     } catch (err: any) {
       setError(err.message || "Download failed");
     } finally {
-      setDownloading(null);
+      setDownloading((prev) => { const next = new Set(prev); next.delete(id); return next; });
     }
   };
 
@@ -665,15 +831,15 @@ function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType
                       {deleting === model.id ? "Deleting..." : "Delete"}
                     </button>
                   </>
-                ) : downloading === model.id ? (
+                ) : downloading.has(model.id) ? (
                   <div className="flex items-center gap-2 w-full">
                     <div className="flex-1 h-1.5 bg-[#1E1E22] rounded-full overflow-hidden">
                       <div
                         className="h-full bg-primary rounded-full transition-all duration-300"
-                        style={{ width: `${downloadProgress}%` }}
+                        style={{ width: `${downloadProgress[model.id] ?? 0}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-primary shrink-0">{downloadProgress}%</span>
+                    <span className="text-[10px] text-primary shrink-0">{downloadProgress[model.id] ?? 0}%</span>
                   </div>
                 ) : (
                   <button

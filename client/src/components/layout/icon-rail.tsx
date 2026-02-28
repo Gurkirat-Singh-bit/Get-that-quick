@@ -12,6 +12,7 @@ import {
   MessagesSquare,
   PenLine,
   FolderKanban,
+  Settings2,
   SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,10 @@ interface IconRailProps {
   onSettingsClick: () => void;
   /** Create a new chat session. */
   onNewChat: () => void;
+  /** Whether the config panel is open. */
+  configOpen?: boolean;
+  /** Toggle config panel visibility. */
+  onToggleConfig?: () => void;
 }
 
 /**
@@ -42,7 +47,7 @@ interface IconRailProps {
  *
  * @param props - {@link IconRailProps}
  */
-export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProjects, onSettingsClick, onNewChat }: IconRailProps) {
+export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProjects, onSettingsClick, onNewChat, configOpen, onToggleConfig }: IconRailProps) {
   return (
     <aside className="w-14 flex flex-col items-center py-5 gap-1.5 shrink-0 bg-[#0A0A0B]">
       {/* Logo */}
@@ -108,6 +113,26 @@ export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProje
       {/* Spacer */}
       <div className="flex-1" />
 
+      {/* Generation Config */}
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>
+          <button
+            onClick={onToggleConfig}
+            className={cn(
+              "w-9 h-9 flex items-center justify-center rounded-xl transition-all",
+              configOpen
+                ? "bg-white/10 text-white"
+                : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
+            )}
+          >
+            <SlidersHorizontal className="w-[18px] h-[18px]" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" sideOffset={10}>
+          Generation Config
+        </TooltipContent>
+      </Tooltip>
+
       {/* Settings */}
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
@@ -115,7 +140,7 @@ export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProje
             onClick={onSettingsClick}
             className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-all"
           >
-            <SlidersHorizontal className="w-[18px] h-[18px]" />
+            <Settings2 className="w-[18px] h-[18px]" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>

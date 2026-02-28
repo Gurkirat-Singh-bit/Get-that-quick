@@ -8,7 +8,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { mkdirSync, existsSync } from "node:fs";
 
-const DATA_DIR_NAME = ".getthatquick";
+const DATA_DIR_NAME = "getthatquick";
 
 // ── Getters ───────────────────────────────────────────────────────────────
 
