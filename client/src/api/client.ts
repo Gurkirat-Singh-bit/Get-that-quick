@@ -199,6 +199,22 @@ export function deleteTemplate(id: string): Promise<null> {
 }
 
 /**
+ * Sync community templates from a GitHub repo.
+ *
+ * @param repoUrl - Optional custom repo URL.
+ * @returns Sync result with count of templates.
+ */
+export function syncCommunityTemplates(
+  repoUrl?: string
+): Promise<{ added: number; total: number }> {
+  return request<{ added: number; total: number }>("/templates/sync", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(repoUrl ? { repoUrl } : {}),
+  });
+}
+
+/**
  * List all discovered template categories.
  *
  * @returns An array of category path strings (e.g. "code/frontend").

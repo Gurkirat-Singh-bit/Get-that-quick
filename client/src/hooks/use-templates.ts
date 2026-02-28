@@ -19,6 +19,8 @@ export interface UseTemplatesReturn {
   local: TemplateMeta[];
   /** Whether the list is loading. */
   loading: boolean;
+  /** Whether a community sync is in progress. */
+  syncing: boolean;
   /** Create a new local template. */
   createTemplate: (title: string, content: string, description?: string, category?: string) => Promise<Template>;
   /** Update an existing local template. */
@@ -29,6 +31,8 @@ export interface UseTemplatesReturn {
   getTemplate: (id: string) => Promise<Template>;
   /** Refresh from server. */
   refresh: () => Promise<void>;
+  /** Sync community templates from GitHub. */
+  syncCommunity: (repoUrl?: string) => Promise<{ added: number; total: number }>;
 }
 
 /**
@@ -40,6 +44,7 @@ export function useTemplates(): UseTemplatesReturn {
   const [community, setCommunity] = useState<TemplateMeta[]>([]);
   const [local, setLocal] = useState<TemplateMeta[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
   /** Load and split templates by source. */
   const refresh = useCallback(async () => {
@@ -105,14 +110,36 @@ export function useTemplates(): UseTemplatesReturn {
     [refresh]
   );
 
+  /**
+   * Sync community templates from GitHub.
+   *
+   * @param repoUrl - Optional custom repo URL.
+   * @returns Sync result with count.
+   */
+  const syncCommunity = useCallback(
+    async (repoUrl?: string) => {
+      setSyncing(true);
+      try {
+        const result = await api.syncCommunityTemplates(repoUrl);
+        await refresh();
+        return result;
+      } finally {
+        setSyncing(false);
+      }
+    },
+    [refresh]
+  );
+
   return {
     community,
     local,
     loading,
+    syncing,
     createTemplate,
     updateTemplate,
     deleteTemplate,
     getTemplate: api.getTemplate,
     refresh,
+    syncCommunity,
   };
 }

@@ -210,6 +210,9 @@ export function Dashboard() {
               const tmpl = await templateHook.createTemplate("Untitled Template", content, "", "general");
               setEditingTemplateId(tmpl.id);
             }}
+            onApplyTemplate={async (templateId) => {
+              await sessionHook.createSession(undefined, templateId);
+            }}
           />
         </main>
 
@@ -230,6 +233,8 @@ export function Dashboard() {
               filter={templateFilter}
               externalCreate={triggerCreate}
               onExternalCreateDone={() => setTriggerCreate(false)}
+              onSyncCommunity={async () => { await templateHook.syncCommunity(); }}
+              syncing={templateHook.syncing}
             />
           </div>
         </div>

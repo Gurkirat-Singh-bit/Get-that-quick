@@ -16,6 +16,7 @@ import {
   unlinkSync,
   statSync,
   mkdirSync,
+  rmSync,
 } from "node:fs";
 import { join, relative } from "node:path";
 import matter from "gray-matter";
@@ -251,4 +252,85 @@ function writeToDisk(filePath: string, tmpl: Template): void {
 
   const md = matter.stringify(tmpl.content, frontmatter);
   writeFileSync(filePath, md, "utf-8");
+}
+
+// ── Community sync ────────────────────────────────────────────────────────
+
+const DEFAULT_REPO = "https://github.com/Gurkirat-Singh-bit/Get-that-quick-prompt-templates.git";
+
+/**
+ * Sync community templates from a GitHub repo.
+ *
+ * Clones (or pulls) the repo into a temp dir, then copies the templates/
+ * folder into the community templates directory.
+ */
+export async function syncCommunityTemplates(
+  repoUrl?: string
+): Promise<{ added: number; total: number }> {
+  const repo = repoUrl || DEFAULT_REPO;
+  const communityDir = getCommunityTemplatesDir();
+  const tmpDir = join(communityDir, ".._sync_tmp");
+
+  try {
+    // Clean up any previous temp dir
+    if (existsSync(tmpDir)) rmSync(tmpDir, { recursive: true, force: true });
+
+    // Clone the repo (shallow for speed)
+    const cloneProc = Bun.spawn(
+      ["git", "clone", "--depth", "1", repo, tmpDir],
+      { stdout: "pipe", stderr: "pipe" }
+    );
+    const exitCode = await cloneProc.exited;
+    if (exitCode !== 0) {
+      const errText = await new Response(cloneProc.stderr).text();
+      throw new Error(`git clone failed (exit ${exitCode}): ${errText.trim()}`);
+    }
+
+    // Find the templates subfolder in the cloned repo
+    const clonedTemplatesDir = join(tmpDir, "templates");
+    if (!existsSync(clonedTemplatesDir)) {
+      throw new Error("Cloned repo does not contain a 'templates/' folder");
+    }
+
+    // Clear existing community templates
+    if (existsSync(communityDir)) {
+      // Remove everything except our temp dir
+      for (const entry of readdirSync(communityDir)) {
+        if (entry === ".._sync_tmp") continue;
+        const fullPath = join(communityDir, entry);
+        rmSync(fullPath, { recursive: true, force: true });
+      }
+    }
+
+    // Copy templates recursively
+    const count = copyDirRecursive(clonedTemplatesDir, communityDir);
+
+    return { added: count, total: count };
+  } finally {
+    // Clean up temp dir
+    if (existsSync(tmpDir)) {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  }
+}
+
+/** Recursively copy directory contents. Returns number of .md files copied. */
+function copyDirRecursive(src: string, dest: string): number {
+  if (!existsSync(dest)) mkdirSync(dest, { recursive: true });
+  let count = 0;
+
+  for (const entry of readdirSync(src)) {
+    const srcPath = join(src, entry);
+    const destPath = join(dest, entry);
+    const stat = statSync(srcPath);
+
+    if (stat.isDirectory()) {
+      count += copyDirRecursive(srcPath, destPath);
+    } else if (entry.endsWith(".md")) {
+      writeFileSync(destPath, readFileSync(srcPath));
+      count++;
+    }
+  }
+
+  return count;
 }

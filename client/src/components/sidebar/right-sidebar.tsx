@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search, FileCode2, Globe, Plus, Trash2, Sparkles, FolderOpen, LayoutTemplate, Pencil, Tag, ChevronDown, ChevronRight, X, Folder } from "lucide-react";
+import { Search, FileCode2, Globe, Plus, Trash2, Sparkles, FolderOpen, LayoutTemplate, Pencil, Tag, ChevronDown, ChevronRight, X, Folder, RefreshCw } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { TemplateMeta, Template } from "@shared/types";
 import type { TemplateFilter } from "@/components/layout/right-icon-rail";
@@ -15,6 +15,8 @@ interface RightSidebarProps {
   filter: TemplateFilter;
   externalCreate: boolean;
   onExternalCreateDone: () => void;
+  onSyncCommunity?: () => Promise<void>;
+  syncing?: boolean;
 }
 
 const filterLabels: Record<TemplateFilter, string> = {
@@ -163,7 +165,12 @@ function CategoryFolder({
           {node.templates.map((t) => (
             <div
               key={t.id}
-              className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors"
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData("application/gtq-template", t.id);
+                e.dataTransfer.effectAllowed = "copy";
+              }}
+              className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing"
               style={{ paddingLeft: `${24 + depth * 12}px` }}
             >
               {source === "community" ? (
@@ -217,6 +224,8 @@ export function RightSidebar({
   filter,
   externalCreate,
   onExternalCreateDone,
+  onSyncCommunity,
+  syncing,
 }: RightSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -378,7 +387,19 @@ export function RightSidebar({
             <div className="mb-2">
               <div className="flex items-center justify-between px-3 py-2">
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Community</h3>
-                <span className="text-[9px] text-zinc-500">{filteredCommunity.length}</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] text-zinc-500">{filteredCommunity.length}</span>
+                  {onSyncCommunity && (
+                    <button
+                      onClick={onSyncCommunity}
+                      disabled={syncing}
+                      className="w-5 h-5 flex items-center justify-center rounded-md text-zinc-500 hover:text-primary hover:bg-white/5 transition-colors disabled:opacity-40"
+                      title="Sync community templates"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${syncing ? "animate-spin" : ""}`} />
+                    </button>
+                  )}
+                </div>
               </div>
               {loading && (
                 <p className="px-3 py-2 text-[11px] text-zinc-600 text-center">Loading…</p>
@@ -409,7 +430,12 @@ export function RightSidebar({
                   {communityTree.templates.map((t) => (
                     <div
                       key={t.id}
-                      className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors"
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("application/gtq-template", t.id);
+                        e.dataTransfer.effectAllowed = "copy";
+                      }}
+                      className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing"
                     >
                       <Globe className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -586,7 +612,12 @@ export function RightSidebar({
                   {localTree.templates.map((t) => (
                     <div
                       key={t.id}
-                      className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors"
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("application/gtq-template", t.id);
+                        e.dataTransfer.effectAllowed = "copy";
+                      }}
+                      className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing"
                     >
                       <FileCode2 className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
                       <div className="flex-1 min-w-0">

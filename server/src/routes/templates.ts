@@ -75,4 +75,16 @@ templates.delete("/:id", (c) => {
   return c.json({ ok: true, data: null });
 });
 
+// Sync community templates from a GitHub repo
+templates.post("/sync", async (c) => {
+  try {
+    const body = await c.req.json<{ repoUrl?: string }>().catch(() => ({ repoUrl: undefined }));
+    const result = await svc.syncCommunityTemplates(body.repoUrl);
+    return c.json({ ok: true, data: result });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Sync failed";
+    return c.json({ ok: false, error: msg }, 500);
+  }
+});
+
 export default templates;

@@ -8,8 +8,8 @@
  * @module components/chat/chat-area
  */
 
-import { useRef, useEffect, useMemo } from "react";
-import { Sparkles, AlertTriangle } from "lucide-react";
+import { useRef, useEffect, useMemo, useState, useCallback } from "react";
+import { Sparkles, AlertTriangle, LayoutTemplate } from "lucide-react";
 import { Message, parsePlanQuestions } from "@/components/chat/message";
 import type { PlanQuestion } from "@/components/chat/message";
 import { ChatInput } from "@/components/chat/chat-input";
@@ -47,6 +47,8 @@ interface ChatAreaProps {
   onEditMessage?: (messageId: string, newContent: string) => void;
   /** Delete a message. */
   onDeleteMessage?: (messageId: string) => void;
+  /** Apply a template by starting a new session with it. */
+  onApplyTemplate?: (templateId: string) => void;
 }
 
 /**
@@ -70,13 +72,40 @@ export function ChatArea({
   onDocumentsChange,
   onEditMessage,
   onDeleteMessage,
+  onApplyTemplate,
 }: ChatAreaProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   /** Auto-scroll when messages change. */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [session?.messages]);
+
+  /** Handle template drop. */
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes("application/gtq-template")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+      setDragOver(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragOver(false);
+      const templateId = e.dataTransfer.getData("application/gtq-template");
+      if (templateId && onApplyTemplate) {
+        onApplyTemplate(templateId);
+      }
+    },
+    [onApplyTemplate]
+  );
 
   /** Derive config status flags. */
   const activeProvider = settings?.ai?.provider;
@@ -106,7 +135,22 @@ export function ChatArea({
   }, [session?.messages, generating]);
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 h-full">
+    <div
+      className={`flex-1 flex flex-col min-w-0 h-full relative ${dragOver ? "ring-2 ring-primary/40 ring-inset" : ""}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      {dragOver && (
+        <div className="absolute inset-0 z-20 bg-primary/5 flex items-center justify-center pointer-events-none">
+          <div className="flex flex-col items-center gap-2 bg-white rounded-2xl px-8 py-6 shadow-lg border border-primary/20">
+            <LayoutTemplate className="w-8 h-8 text-primary" />
+            <p className="text-sm font-semibold text-zinc-700">Drop to start chat with template</p>
+          </div>
+        </div>
+      )}
+
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-[#E2E4E9] shrink-0">
         <h1 className="text-base font-bold tracking-tight text-zinc-800">
