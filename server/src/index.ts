@@ -10,7 +10,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { serveStatic } from "hono/bun";
 import { existsSync, readdirSync, copyFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -79,11 +78,43 @@ app.get("/api/health", (c) =>
   })
 );
 
+// ── Static file serving ──────────────────────────────────────────────────
+//
+// Resolve the client dist directory relative to this source file
+// so it works in both dev (CWD = server/) and Docker (CWD = /app).
+
+const CLIENT_DIST = join(import.meta.dir, "../../client/dist");
+
 // Static file serving (production — built React SPA)
-app.use("/assets/*", serveStatic({ root: "../client/dist" }));
+app.use("/assets/*", async (c, next) => {
+  const filePath = join(CLIENT_DIST, c.req.path);
+  const file = Bun.file(filePath);
+  if (await file.exists()) {
+    return new Response(file);
+  }
+  return next();
+});
+
+app.use("/fonts/*", async (c, next) => {
+  const filePath = join(CLIENT_DIST, c.req.path);
+  const file = Bun.file(filePath);
+  if (await file.exists()) {
+    return new Response(file);
+  }
+  return next();
+});
 
 // SPA fallback — serve index.html for all non-API/non-WS routes
-app.get("*", serveStatic({ root: "../client/dist", path: "/index.html" }));
+app.get("*", async (c) => {
+  const indexPath = join(CLIENT_DIST, "index.html");
+  const file = Bun.file(indexPath);
+  if (await file.exists()) {
+    return new Response(file, {
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+  }
+  return c.text("Not Found", 404);
+});
 
 // ── Bun.serve (HTTP + WebSocket) ─────────────────────────────────────────
 
