@@ -29,6 +29,7 @@ sessions.post("/", async (c) => {
     id: `sess_${nanoid(12)}`,
     title: body.title ?? "New Session",
     templateId: body.templateId ?? null,
+    projectId: null,
     createdAt: now,
     updatedAt: now,
     messages: [],

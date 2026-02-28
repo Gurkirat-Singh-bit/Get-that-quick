@@ -1,8 +1,18 @@
+/**
+ * @fileoverview Chat message bubble with markdown rendering.
+ *
+ * Renders user and assistant messages with full markdown support
+ * (GFM tables, code blocks, etc.). Includes action buttons for
+ * copy, regenerate, expand, and refine on assistant messages.
+ *
+ * @module components/chat/message
+ */
+
 import { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
-import { Copy, Check, RefreshCw, Maximize2, Sparkles } from "lucide-react";
+import { Copy, Check, RotateCw, Maximize2, Wand2, BookmarkPlus } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +26,8 @@ export interface ChatMessage {
 
 interface MessageProps {
   message: ChatMessage;
+  /** Called when the user wants to convert this response to a template. */
+  onSaveAsTemplate?: (content: string) => void;
 }
 
 function CopyButton({ text }: { text: string }) {
@@ -30,7 +42,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="absolute top-2 right-2 p-1.5 rounded-md bg-slate-700/80 text-slate-300 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+      className="absolute top-2 right-2 p-1.5 rounded-md bg-zinc-700/80 text-zinc-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
       title="Copy code"
     >
       {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -38,7 +50,7 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function MessageActions({ content }: { content: string }) {
+function MessageActions({ content, onSaveAsTemplate }: { content: string; onSaveAsTemplate?: (content: string) => void }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -51,38 +63,48 @@ function MessageActions({ content }: { content: string }) {
     <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
       <button
         onClick={handleCopy}
-        className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+        className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
         title="Copy response"
       >
         {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
         <span>{copied ? "Copied" : "Copy"}</span>
       </button>
       <button
-        className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+        className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
         title="Regenerate response"
       >
-        <RefreshCw className="w-3 h-3" />
+        <RotateCw className="w-3 h-3" />
         <span>Regenerate</span>
       </button>
       <button
-        className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+        className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
         title="Expand response"
       >
         <Maximize2 className="w-3 h-3" />
         <span>Expand</span>
       </button>
       <button
-        className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+        className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
         title="Refine response"
       >
-        <Sparkles className="w-3 h-3" />
+        <Wand2 className="w-3 h-3" />
         <span>Refine</span>
       </button>
+      {onSaveAsTemplate && (
+        <button
+          onClick={() => onSaveAsTemplate(content)}
+          className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-zinc-400 hover:text-primary hover:bg-primary/5 transition-colors"
+          title="Save as template"
+        >
+          <BookmarkPlus className="w-3 h-3" />
+          <span>Template</span>
+        </button>
+      )}
     </div>
   );
 }
 
-export function Message({ message }: MessageProps) {
+export function Message({ message, onSaveAsTemplate }: MessageProps) {
   const isUser = message.role === "user";
 
   const markdownComponents = useMemo(
@@ -91,7 +113,7 @@ export function Message({ message }: MessageProps) {
       pre: ({ children, ...props }: any) => (
         <div className="relative group my-3">
           <pre
-            className="bg-[#1E1E1E] text-slate-200 rounded-lg p-4 overflow-x-auto text-[13px] leading-relaxed border border-slate-200/10"
+            className="bg-[#1E1E2E] text-zinc-200 rounded-lg p-4 overflow-x-auto text-[13px] leading-relaxed border border-[#2A2A3C]"
             {...props}
           >
             {children}
@@ -111,7 +133,7 @@ export function Message({ message }: MessageProps) {
         if (isInline) {
           return (
             <code
-              className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded text-[13px] font-mono"
+              className="bg-zinc-200/60 text-zinc-700 px-1.5 py-0.5 rounded text-[13px] font-mono"
               {...props}
             >
               {children}
@@ -128,7 +150,7 @@ export function Message({ message }: MessageProps) {
       table: ({ children, ...props }: any) => (
         <div className="my-3 overflow-x-auto">
           <table
-            className="w-full text-sm border-collapse border border-slate-200"
+            className="w-full text-sm border-collapse border border-[#E2E4E9]"
             {...props}
           >
             {children}
@@ -138,7 +160,7 @@ export function Message({ message }: MessageProps) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       th: ({ children, ...props }: any) => (
         <th
-          className="border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-semibold text-slate-700"
+          className="border border-[#E2E4E9] bg-zinc-100 px-3 py-2 text-left text-xs font-semibold text-zinc-700"
           {...props}
         >
           {children}
@@ -147,7 +169,7 @@ export function Message({ message }: MessageProps) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       td: ({ children, ...props }: any) => (
         <td
-          className="border border-slate-200 px-3 py-2 text-sm text-slate-600"
+          className="border border-[#E2E4E9] px-3 py-2 text-sm text-zinc-600"
           {...props}
         >
           {children}
@@ -167,7 +189,7 @@ export function Message({ message }: MessageProps) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       blockquote: ({ children, ...props }: any) => (
         <blockquote
-          className="border-l-3 border-slate-300 pl-4 my-3 text-slate-500 italic"
+          className="border-l-3 border-zinc-300 pl-4 my-3 text-zinc-500 italic"
           {...props}
         >
           {children}
@@ -187,15 +209,15 @@ export function Message({ message }: MessageProps) {
       ),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       h1: ({ children, ...props }: any) => (
-        <h1 className="text-xl font-bold mt-5 mb-2 text-slate-900" {...props}>{children}</h1>
+        <h1 className="text-xl font-bold mt-5 mb-2 text-zinc-800" {...props}>{children}</h1>
       ),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       h2: ({ children, ...props }: any) => (
-        <h2 className="text-lg font-bold mt-4 mb-2 text-slate-900" {...props}>{children}</h2>
+        <h2 className="text-lg font-bold mt-4 mb-2 text-zinc-800" {...props}>{children}</h2>
       ),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       h3: ({ children, ...props }: any) => (
-        <h3 className="text-base font-semibold mt-3 mb-1.5 text-slate-800" {...props}>{children}</h3>
+        <h3 className="text-base font-semibold mt-3 mb-1.5 text-zinc-700" {...props}>{children}</h3>
       ),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       p: ({ children, ...props }: any) => (
@@ -203,7 +225,7 @@ export function Message({ message }: MessageProps) {
       ),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       hr: (props: any) => (
-        <hr className="my-4 border-slate-200" {...props} />
+        <hr className="my-4 border-[#E2E4E9]" {...props} />
       ),
     }),
     []
@@ -212,7 +234,7 @@ export function Message({ message }: MessageProps) {
   if (isUser) {
     return (
       <div className="py-4">
-        <p className="text-[15px] text-slate-800 leading-relaxed">
+        <p className="text-[15px] text-zinc-800 leading-relaxed">
           {message.content}
         </p>
       </div>
@@ -220,7 +242,7 @@ export function Message({ message }: MessageProps) {
   }
 
   return (
-    <div className="py-4 text-[15px] text-slate-700 leading-relaxed group">
+    <div className="py-4 text-[15px] text-zinc-700 leading-relaxed group">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw]}
@@ -228,7 +250,7 @@ export function Message({ message }: MessageProps) {
       >
         {message.content}
       </ReactMarkdown>
-      <MessageActions content={message.content} />
+      <MessageActions content={message.content} onSaveAsTemplate={onSaveAsTemplate} />
     </div>
   );
 }

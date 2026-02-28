@@ -1,8 +1,21 @@
-import { useState } from "react";
-import { X, Settings, FolderArchive, Info, BookTemplate, ChevronRight, Cpu, Github, BookOpen, Plus, Trash2, ExternalLink, Check } from "lucide-react";
+/**
+ * @fileoverview Settings overlay — modal panel for app configuration.
+ *
+ * Categories: General (accent, font, default model), Templates,
+ * Models & LLM (providers with real API configs), Backup, About.
+ * Receives server-backed settings via props from the Dashboard.
+ *
+ * @module components/settings/settings-overlay
+ */
+
+import { useState, useEffect } from "react";
+import { X, SlidersHorizontal, HardDrive, Info, LayoutTemplate, ChevronRight, BrainCircuit, Github, BookOpen, Plus, Trash2, ExternalLink, Check, Globe, FileCode2, Download, Upload, AlertTriangle, Mic, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { accentPresets, getAccent, setAccent } from "@/lib/accent";
+import type { Settings as SettingsType, AIProviderConfig, VoskModelInfo } from "@shared/types";
+import * as api from "@/api/client";
 
+/** Check if a hex color is perceptually light. */
 function isLight(hex: string): boolean {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
   const g = parseInt(hex.slice(3, 5), 16) / 255;
@@ -10,23 +23,53 @@ function isLight(hex: string): boolean {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5;
 }
 
-type SettingsCategory = "general" | "templates" | "models" | "backup" | "about";
+type SettingsCategory = "general" | "templates" | "models" | "voice" | "backup" | "about";
 
+/** Props accepted by {@link SettingsOverlay}. */
 interface SettingsOverlayProps {
+  /** Close the overlay. */
   onClose: () => void;
+  /** Current server settings (null while loading). */
+  settings: SettingsType | null;
+  /** Persist partial settings updates. */
+  onUpdateSettings: (updates: Partial<SettingsType>) => Promise<void>;
+  /** Test a provider connection. Returns true on success. */
+  onTestProvider: (config: { apiKey: string; model: string; baseUrl: string }) => Promise<boolean>;
+  /** Whether settings are still loading. */
+  settingsLoading: boolean;
 }
 
 const categories: { id: SettingsCategory; label: string; icon: React.ElementType }[] = [
-  { id: "general", label: "General", icon: Settings },
-  { id: "templates", label: "Templates", icon: BookTemplate },
-  { id: "models", label: "Models & LLM", icon: Cpu },
-  { id: "backup", label: "Backup & Sync", icon: FolderArchive },
+  { id: "general", label: "General", icon: SlidersHorizontal },
+  { id: "templates", label: "Templates", icon: LayoutTemplate },
+  { id: "models", label: "Models & LLM", icon: BrainCircuit },
+  { id: "voice", label: "Voice / STT", icon: Mic },
+  { id: "backup", label: "Backup & Sync", icon: HardDrive },
   { id: "about", label: "About", icon: Info },
 ];
 
+const FONT_KEY = "gtq_font";
+
+function getFont(): string {
+  return localStorage.getItem(FONT_KEY) || "Inter";
+}
+
+function setFontPersist(font: string) {
+  localStorage.setItem(FONT_KEY, font);
+  applyFont(font);
+}
+
+function applyFont(font: string) {
+  const root = document.documentElement;
+  const family = font === "System UI" ? "system-ui, -apple-system, sans-serif" : `"${font}", system-ui, sans-serif`;
+  root.style.setProperty("--font-display", family);
+  document.body.style.fontFamily = family;
+}
+
 const fontOptions = [
-  "Plus Jakarta Sans",
+  "GTQ Custom",
   "Inter",
+  "Plus Jakarta Sans",
   "JetBrains Mono",
   "Fira Code",
   "Source Sans 3",
@@ -34,22 +77,43 @@ const fontOptions = [
   "System UI",
 ];
 
-function GeneralSettings() {
-  const [font, setFont] = useState("Plus Jakarta Sans");
+/** Well-known provider presets with base URLs and docs. */
+const providerPresets: { name: string; baseUrl: string; hint: string }[] = [
+  { name: "openrouter", baseUrl: "https://openrouter.ai/api/v1", hint: "Unified access to 200+ models. Get key at openrouter.ai/keys" },
+  { name: "openai", baseUrl: "https://api.openai.com/v1", hint: "GPT-4o, GPT-4, GPT-3.5. Get key at platform.openai.com/api-keys" },
+  { name: "ollama", baseUrl: "http://localhost:11434/v1", hint: "Local models. No API key needed. Install at ollama.com" },
+];
+
+function GeneralSettings({ settings, onUpdateSettings }: { settings?: SettingsType | null; onUpdateSettings?: (u: Partial<SettingsType>) => Promise<void> }) {
+  const [font, setFont] = useState(getFont);
   const [activeAccent, setActiveAccent] = useState(getAccent);
   const [customColor, setCustomColor] = useState("");
+
+  // Apply font on mount
+  useEffect(() => {
+    applyFont(font);
+  }, []);
 
   const pickColor = (hex: string) => {
     setActiveAccent(hex);
     setAccent(hex);
   };
 
+  const handleFontChange = (newFont: string) => {
+    setFont(newFont);
+    setFontPersist(newFont);
+  };
+
+  const providers = settings?.ai?.providers ?? {};
+  const activeProvider = settings?.ai?.provider ?? "";
+  const activeConfig = providers[activeProvider];
+
   return (
     <div className="space-y-6">
       {/* Accent Color */}
       <div>
         <h3 className="text-sm font-semibold text-white mb-1">Accent Color</h3>
-        <p className="text-xs text-slate-500 mb-3">Choose the primary color for the interface</p>
+        <p className="text-xs text-zinc-500 mb-3">Choose the primary color for the interface</p>
         <div className="flex flex-wrap gap-2 mb-3">
           {accentPresets.map((p) => (
             <button
@@ -72,7 +136,7 @@ function GeneralSettings() {
         </div>
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 text-xs">#</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 text-xs">#</span>
             <input
               type="text"
               value={customColor}
@@ -81,7 +145,7 @@ function GeneralSettings() {
                 if (e.key === "Enter" && customColor.length === 6) pickColor(`#${customColor}`);
               }}
               placeholder="Custom hex..."
-              className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 pl-7 pr-3 text-xs text-slate-300 placeholder:text-slate-600 outline-none focus:border-primary/40"
+              className="w-full bg-[#0A0A0B] border border-[#1E1E22] rounded-lg py-2 pl-7 pr-3 text-xs text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/40"
             />
           </div>
           <button
@@ -92,92 +156,181 @@ function GeneralSettings() {
           </button>
         </div>
       </div>
-      <div className="border-t border-[#333] pt-6">
+
+      {/* Font Family */}
+      <div className="border-t border-[#1E1E22] pt-6">
         <h3 className="text-sm font-semibold text-white mb-1">Font Family</h3>
-        <p className="text-xs text-slate-500 mb-3">Choose the display font for the interface</p>
+        <p className="text-xs text-zinc-500 mb-3">Choose the display font. Drop custom fonts in <code className="text-primary/80 bg-primary/5 px-1 rounded text-[10px]">public/fonts/</code></p>
         <select
           value={font}
-          onChange={(e) => setFont(e.target.value)}
-          className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 outline-none focus:border-primary/40"
+          onChange={(e) => handleFontChange(e.target.value)}
+          className="w-full bg-[#0A0A0B] border border-[#1E1E22] rounded-lg py-2 px-3 text-xs text-zinc-300 outline-none focus:border-primary/40 cursor-pointer"
         >
           {fontOptions.map((f) => (
             <option key={f} value={f}>{f}</option>
           ))}
         </select>
+        <p className="text-[10px] text-zinc-600 mt-1.5" style={{ fontFamily: font === "System UI" ? "system-ui" : `"${font}", system-ui` }}>
+          Preview: The quick brown fox jumps over the lazy dog
+        </p>
       </div>
-      <div className="border-t border-[#333] pt-6">
-        <h3 className="text-sm font-semibold text-white mb-1">Voice Input</h3>
-        <p className="text-xs text-slate-500 mb-3">Configure speech-to-text settings</p>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <div className="w-9 h-5 bg-primary rounded-full relative">
-            <div className="w-4 h-4 bg-white rounded-full absolute top-0.5 right-0.5" />
-          </div>
-          <span className="text-xs text-slate-300">Enable voice input</span>
-        </label>
-      </div>
-      <div className="border-t border-[#333] pt-6">
+
+      {/* Default Model */}
+      <div className="border-t border-[#1E1E22] pt-6">
         <h3 className="text-sm font-semibold text-white mb-1">Default Model</h3>
-        <p className="text-xs text-slate-500 mb-3">Set the default LLM for new chats</p>
-        <select className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 outline-none focus:border-primary/40">
-          <option>Local — llama3.2</option>
-          <option>Local — codellama</option>
-          <option>Local — mistral</option>
-        </select>
+        <p className="text-xs text-zinc-500 mb-3">Set the default LLM for new chats</p>
+        {Object.keys(providers).length === 0 ? (
+          <p className="text-xs text-zinc-600 bg-[#0A0A0B] rounded-lg px-3 py-2.5 border border-[#1E1E22]">
+            No providers configured. Add one in <span className="text-primary">Models & LLM</span> first.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            <select
+              value={activeProvider}
+              onChange={async (e) => {
+                if (onUpdateSettings && settings) {
+                  await onUpdateSettings({ ai: { ...settings.ai, provider: e.target.value } });
+                }
+              }}
+              className="w-full bg-[#0A0A0B] border border-[#1E1E22] rounded-lg py-2 px-3 text-xs text-zinc-300 outline-none focus:border-primary/40 cursor-pointer"
+            >
+              {Object.keys(providers).map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+            {activeConfig && (
+              <input
+                type="text"
+                defaultValue={activeConfig.model}
+                onBlur={async (e) => {
+                  if (onUpdateSettings && settings) {
+                    const updated = { ...providers, [activeProvider]: { ...activeConfig, model: e.target.value } };
+                    await onUpdateSettings({ ai: { ...settings.ai, providers: updated } });
+                  }
+                }}
+                placeholder="Model name (e.g. gpt-4o, claude-3.5-sonnet)"
+                className="w-full bg-[#0A0A0B] border border-[#1E1E22] rounded-lg py-2 px-3 text-xs text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/40"
+              />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 function TemplateSettings() {
+  const [repoUrl, setRepoUrl] = useState("https://github.com/getthatquick/community-templates");
+
   return (
     <div className="space-y-6">
+      {/* Community Repository */}
       <div>
-        <h3 className="text-sm font-semibold text-white mb-1">Community Repository</h3>
-        <p className="text-xs text-slate-500 mb-3">Git repository for community prompt templates</p>
+        <div className="flex items-center gap-2 mb-1">
+          <Globe className="w-3.5 h-3.5 text-primary" />
+          <h3 className="text-sm font-semibold text-white">Community Repository</h3>
+        </div>
+        <p className="text-xs text-zinc-500 mb-3">Git repository for community prompt templates</p>
         <div className="flex gap-2">
           <input
             type="text"
-            value="https://github.com/getthatquick/community-templates"
-            readOnly
-            className="flex-1 bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-400 outline-none"
+            value={repoUrl}
+            onChange={(e) => setRepoUrl(e.target.value)}
+            className="flex-1 bg-[#0A0A0B] border border-[#1E1E22] rounded-lg py-2 px-3 text-xs text-zinc-300 outline-none focus:border-primary/40"
+            placeholder="https://github.com/org/templates"
           />
           <button className="px-3 py-2 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
             Sync
           </button>
         </div>
       </div>
-      <div className="border-t border-[#333] pt-6">
-        <h3 className="text-sm font-semibold text-white mb-1">Local Templates</h3>
-        <p className="text-xs text-slate-500 mb-3">Manage your saved templates</p>
-        <div className="space-y-2">
-          {["Code Review Request", "Bug Report", "Email Draft", "Meeting Summary"].map((t) => (
-            <div key={t} className="flex items-center justify-between bg-[#1E1E1E] rounded-lg px-3 py-2.5">
-              <span className="text-xs text-slate-300">{t}</span>
-              <button className="text-[10px] text-slate-500 hover:text-red-400 transition-colors">Remove</button>
-            </div>
-          ))}
+
+      {/* Local Templates */}
+      <div className="border-t border-[#1E1E22] pt-6">
+        <div className="flex items-center gap-2 mb-1">
+          <FileCode2 className="w-3.5 h-3.5 text-primary" />
+          <h3 className="text-sm font-semibold text-white">Local Templates</h3>
         </div>
-      </div>
-      <div className="border-t border-[#333] pt-6">
-        <h3 className="text-sm font-semibold text-white mb-1">Import / Export</h3>
-        <p className="text-xs text-slate-500 mb-3">Share templates between instances</p>
+        <p className="text-xs text-zinc-500 mb-3">Manage your custom templates. Create and edit from the Templates sidebar.</p>
         <div className="flex gap-2">
-          <button className="px-4 py-2 rounded-lg bg-white/5 text-slate-300 text-xs font-medium hover:bg-white/8 transition-colors">Import JSON</button>
-          <button className="px-4 py-2 rounded-lg bg-white/5 text-slate-300 text-xs font-medium hover:bg-white/8 transition-colors">Export All</button>
+          <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/5 text-zinc-300 text-xs font-medium hover:bg-white/8 transition-colors">
+            <Upload className="w-3 h-3" />
+            Import JSON
+          </button>
+          <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/5 text-zinc-300 text-xs font-medium hover:bg-white/8 transition-colors">
+            <Download className="w-3 h-3" />
+            Export All
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function ModelSettings() {
-  const [providers, setProviders] = useState([
-    { id: "ollama", name: "Ollama", url: "http://localhost:11434", type: "local" as const, enabled: true },
-    { id: "openrouter", name: "OpenRouter", url: "https://openrouter.ai/api", type: "cloud" as const, enabled: true },
-  ]);
+/** Props for model settings sub-component. */
+interface ModelSettingsProps {
+  settings: SettingsType | null;
+  onUpdateSettings: (updates: Partial<SettingsType>) => Promise<void>;
+  onTestProvider: (config: { apiKey: string; model: string; baseUrl: string }) => Promise<boolean>;
+}
 
-  const handleRemoveProvider = (id: string) => {
-    setProviders((prev) => prev.filter((p) => p.id !== id));
+function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSettingsProps) {
+  const [showPresets, setShowPresets] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newUrl, setNewUrl] = useState("");
+  const [testing, setTesting] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<Record<string, boolean | null>>({});
+
+  const providers = settings?.ai?.providers ?? {};
+  const activeProvider = settings?.ai?.provider ?? "";
+
+  /** Remove a provider from settings. */
+  const handleRemoveProvider = async (name: string) => {
+    const updated = { ...providers };
+    delete updated[name];
+    const newActive = activeProvider === name ? Object.keys(updated)[0] || "" : activeProvider;
+    await onUpdateSettings({ ai: { provider: newActive, providers: updated } });
+  };
+
+  /** Add a provider (from preset or manual). */
+  const handleAddProvider = async (name: string, baseUrl: string) => {
+    if (!name.trim() || !baseUrl.trim()) return;
+    const updated = {
+      ...providers,
+      [name.trim()]: { apiKey: "", model: "", baseUrl: baseUrl.trim() },
+    };
+    const active = activeProvider || name.trim();
+    await onUpdateSettings({ ai: { provider: active, providers: updated } });
+    setNewName("");
+    setNewUrl("");
+    setShowPresets(false);
+  };
+
+  /** Test a provider's connection. */
+  const handleTest = async (name: string, config: AIProviderConfig) => {
+    setTesting(name);
+    setTestResults((prev) => ({ ...prev, [name]: null }));
+    const ok = await onTestProvider(config);
+    setTestResults((prev) => ({ ...prev, [name]: ok }));
+    setTesting(null);
+  };
+
+  /** Update a single field on a provider entry. */
+  const handleUpdateProviderField = async (
+    name: string,
+    field: keyof AIProviderConfig,
+    value: string
+  ) => {
+    const updated = {
+      ...providers,
+      [name]: { ...providers[name], [field]: value },
+    };
+    await onUpdateSettings({ ai: { ...settings!.ai, providers: updated } });
+  };
+
+  /** Set the active provider. */
+  const handleSetActive = async (name: string) => {
+    await onUpdateSettings({ ai: { ...settings!.ai, provider: name } });
   };
 
   return (
@@ -185,40 +338,102 @@ function ModelSettings() {
       <div>
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-sm font-semibold text-white">Providers</h3>
-          <button className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-primary hover:bg-primary/10 transition-colors">
+          <button
+            onClick={() => setShowPresets(!showPresets)}
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-primary hover:bg-primary/10 transition-colors"
+          >
             <Plus className="w-3 h-3" />
             Add Provider
           </button>
         </div>
-        <p className="text-xs text-slate-500 mb-3">Manage LLM providers for your sessions</p>
+        <p className="text-xs text-zinc-500 mb-3">Configure LLM providers. Each uses an OpenAI-compatible API.</p>
+
+        {/* Provider presets dropdown */}
+        {showPresets && (
+          <div className="mb-4 bg-[#0A0A0B] rounded-lg border border-[#1E1E22] p-3 space-y-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-1 mb-2">Quick Add</p>
+            {providerPresets.filter((p) => !providers[p.name]).map((preset) => (
+              <button
+                key={preset.name}
+                onClick={() => handleAddProvider(preset.name, preset.baseUrl)}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-white/4 transition-colors group"
+              >
+                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <BrainCircuit className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs text-zinc-300 font-medium block">{preset.name}</span>
+                  <span className="text-[10px] text-zinc-600 block truncate">{preset.hint}</span>
+                </div>
+                <Plus className="w-3 h-3 text-zinc-600 group-hover:text-primary transition-colors shrink-0" />
+              </button>
+            ))}
+            <div className="mt-2 pt-2 border-t border-[#1E1E22]">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-1 mb-2">Custom</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Provider name"
+                  className="flex-1 bg-[#161618] border border-[#1E1E22] rounded-lg py-1.5 px-2.5 text-[11px] text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/40"
+                />
+                <input
+                  type="text"
+                  value={newUrl}
+                  onChange={(e) => setNewUrl(e.target.value)}
+                  placeholder="Base URL"
+                  className="flex-1 bg-[#161618] border border-[#1E1E22] rounded-lg py-1.5 px-2.5 text-[11px] text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/40"
+                />
+                <button
+                  onClick={() => handleAddProvider(newName, newUrl)}
+                  className="px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary text-[11px] font-medium hover:bg-primary/20 transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Existing providers */}
         <div className="space-y-2">
-          {providers.map((p) => (
-            <div key={p.id} className="bg-[#1E1E1E] rounded-lg px-3 py-3 border border-[#333]">
+          {Object.entries(providers).map(([name, config]) => (
+            <div key={name} className="bg-[#0A0A0B] rounded-lg px-3 py-3 border border-[#1E1E22]">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-300 font-medium">{p.name}</span>
-                  <span className={cn(
-                    "text-[9px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wide",
-                    p.type === "local" ? "bg-emerald-500/10 text-emerald-400" : "bg-blue-500/10 text-blue-400"
-                  )}>
-                    {p.type}
-                  </span>
+                  <BrainCircuit className="w-3.5 h-3.5 text-zinc-500" />
+                  <span className="text-xs text-zinc-300 font-medium">{name}</span>
+                  {activeProvider === name && (
+                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wide bg-emerald-500/10 text-emerald-400">
+                      active
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <div className={cn(
-                      "w-7 h-4 rounded-full relative transition-colors",
-                      p.enabled ? "bg-primary" : "bg-white/10"
-                    )}>
-                      <div className={cn(
-                        "w-3 h-3 bg-white rounded-full absolute top-0.5 transition-all",
-                        p.enabled ? "right-0.5" : "left-0.5"
-                      )} />
-                    </div>
-                  </label>
+                  {activeProvider !== name && (
+                    <button
+                      onClick={() => handleSetActive(name)}
+                      className="text-[10px] text-primary hover:underline mr-1"
+                    >
+                      Activate
+                    </button>
+                  )}
                   <button
-                    onClick={() => handleRemoveProvider(p.id)}
-                    className="w-6 h-6 flex items-center justify-center rounded text-slate-600 hover:text-red-400 transition-colors"
+                    onClick={() => handleTest(name, config)}
+                    disabled={testing !== null}
+                    className={cn(
+                      "text-[10px] transition-colors mr-1",
+                      testResults[name] === true ? "text-emerald-400" :
+                      testResults[name] === false ? "text-red-400" :
+                      "text-zinc-500 hover:text-primary"
+                    )}
+                  >
+                    {testing === name ? "Testing..." : testResults[name] === true ? "Connected" : testResults[name] === false ? "Failed" : "Test"}
+                  </button>
+                  <button
+                    onClick={() => handleRemoveProvider(name)}
+                    className="w-6 h-6 flex items-center justify-center rounded text-zinc-600 hover:text-red-400 transition-colors"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -226,38 +441,63 @@ function ModelSettings() {
               </div>
               <input
                 type="text"
-                defaultValue={p.url}
-                className="w-full bg-[#161616] border border-[#2a2a2a] rounded-md py-1.5 px-2.5 text-[11px] text-slate-400 outline-none focus:border-primary/40"
+                defaultValue={config.baseUrl}
+                onBlur={(e) => handleUpdateProviderField(name, "baseUrl", e.target.value)}
+                className="w-full bg-[#161618] border border-[#1A1A1E] rounded-md py-1.5 px-2.5 text-[11px] text-zinc-400 outline-none focus:border-primary/40 mb-1.5"
+                placeholder="Base URL"
               />
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="border-t border-[#333] pt-6">
-        <h3 className="text-sm font-semibold text-white mb-1">Available Models</h3>
-        <p className="text-xs text-slate-500 mb-3">Models detected from connected providers</p>
-        <div className="space-y-2">
-          {[
-            { name: "llama3.2", size: "4.7 GB", provider: "Ollama", status: "active" },
-            { name: "codellama", size: "3.8 GB", provider: "Ollama", status: "available" },
-            { name: "mistral", size: "4.1 GB", provider: "Ollama", status: "available" },
-            { name: "gpt-4o-mini", size: "—", provider: "OpenRouter", status: "available" },
-          ].map((m) => (
-            <div key={m.name} className="flex items-center justify-between bg-[#1E1E1E] rounded-lg px-3 py-2.5">
-              <div>
-                <span className="text-xs text-slate-300 font-medium">{m.name}</span>
-                <span className="text-[10px] text-slate-600 ml-2">{m.size}</span>
-                <span className="text-[9px] text-slate-600 ml-2">via {m.provider}</span>
+              <div className="flex gap-1.5">
+                <input
+                  type="password"
+                  defaultValue={config.apiKey}
+                  onBlur={(e) => handleUpdateProviderField(name, "apiKey", e.target.value)}
+                  className="flex-1 bg-[#161618] border border-[#1A1A1E] rounded-md py-1.5 px-2.5 text-[11px] text-zinc-400 outline-none focus:border-primary/40"
+                  placeholder="API Key (optional for local)"
+                />
+                <input
+                  type="text"
+                  defaultValue={config.model}
+                  onBlur={(e) => handleUpdateProviderField(name, "model", e.target.value)}
+                  className="flex-1 bg-[#161618] border border-[#1A1A1E] rounded-md py-1.5 px-2.5 text-[11px] text-zinc-400 outline-none focus:border-primary/40"
+                  placeholder="Model (e.g. gpt-4o)"
+                />
               </div>
-              <span className={cn(
-                "text-[10px] font-medium px-2 py-0.5 rounded-full",
-                m.status === "active" ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-slate-500"
-              )}>
-                {m.status}
-              </span>
             </div>
           ))}
         </div>
+
+        {Object.keys(providers).length === 0 && !showPresets && (
+          <div className="bg-[#0A0A0B] rounded-lg p-6 border border-[#1E1E22] text-center">
+            <BrainCircuit className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
+            <p className="text-xs text-zinc-500 mb-2">No providers configured yet</p>
+            <button
+              onClick={() => setShowPresets(true)}
+              className="text-[11px] text-primary hover:underline"
+            >
+              Add your first provider
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-[#1E1E22] pt-6">
+        <h3 className="text-sm font-semibold text-white mb-1">Active Provider</h3>
+        {activeProvider ? (
+          <div className="bg-[#0A0A0B] rounded-lg px-3 py-2.5 border border-[#1E1E22]">
+            <p className="text-xs text-zinc-400">
+              Provider: <span className="text-primary font-medium">{activeProvider}</span>
+            </p>
+            {providers[activeProvider]?.model && (
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Model: <span className="text-zinc-300 font-medium">{providers[activeProvider].model}</span>
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-zinc-600 bg-[#0A0A0B] rounded-lg px-3 py-2.5 border border-[#1E1E22]">
+            No active provider. Add and configure one above.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -268,24 +508,210 @@ function BackupSettings() {
     <div className="space-y-6">
       <div>
         <h3 className="text-sm font-semibold text-white mb-1">Data Export</h3>
-        <p className="text-xs text-slate-500 mb-3">Export all chats, projects, and settings</p>
-        <button className="px-4 py-2 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
+        <p className="text-xs text-zinc-500 mb-3">Export all chats, templates, and settings as JSON</p>
+        <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
+          <Download className="w-3 h-3" />
           Export Everything (JSON)
         </button>
       </div>
-      <div className="border-t border-[#333] pt-6">
+      <div className="border-t border-[#1E1E22] pt-6">
         <h3 className="text-sm font-semibold text-white mb-1">Import Data</h3>
-        <p className="text-xs text-slate-500 mb-3">Restore from a previous export</p>
-        <button className="px-4 py-2 rounded-lg bg-white/5 text-slate-300 text-xs font-medium hover:bg-white/8 transition-colors">
+        <p className="text-xs text-zinc-500 mb-3">Restore from a previous export</p>
+        <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/5 text-zinc-300 text-xs font-medium hover:bg-white/8 transition-colors">
+          <Upload className="w-3 h-3" />
           Import from File
         </button>
       </div>
-      <div className="border-t border-[#333] pt-6">
+      <div className="border-t border-[#1E1E22] pt-6">
         <h3 className="text-sm font-semibold text-white mb-1">Reset</h3>
-        <p className="text-xs text-slate-500 mb-3">Clear all data and start fresh</p>
-        <button className="px-4 py-2 rounded-lg bg-red-500/10 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-colors">
+        <p className="text-xs text-zinc-500 mb-3">Clear all data and start fresh</p>
+        <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-500/10 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-colors">
+          <AlertTriangle className="w-3 h-3" />
           Reset All Data
         </button>
+      </div>
+    </div>
+  );
+}
+
+/** Voice / STT settings — download, activate, delete Vosk models. */
+function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType | null; onUpdateSettings?: (u: Partial<SettingsType>) => Promise<void> }) {
+  const [models, setModels] = useState<VoskModelInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const refreshModels = () => {
+    api.listModels()
+      .then(setModels)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { refreshModels(); }, []);
+
+  const handleDownload = async (id: string) => {
+    setDownloading(id);
+    setDownloadProgress(0);
+    setError(null);
+    try {
+      await api.downloadModel(id, (info) => setDownloadProgress(info.percent));
+      refreshModels();
+    } catch (err: any) {
+      setError(err.message || "Download failed");
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const handleActivate = async (id: string) => {
+    try {
+      await api.activateModel(id);
+      if (onUpdateSettings) {
+        await onUpdateSettings({ stt: { activeModel: id, sampleRate: settings?.stt?.sampleRate ?? 16000 } });
+      }
+      refreshModels();
+    } catch (err: any) {
+      setError(err.message || "Activation failed");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeleting(id);
+    setError(null);
+    try {
+      await api.deleteModel(id);
+      refreshModels();
+    } catch (err: any) {
+      setError(err.message || "Delete failed");
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-5 h-5 text-primary animate-spin" />
+        <span className="ml-2 text-xs text-zinc-500">Loading models...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-sm font-semibold text-white mb-1">Vosk Speech Models</h3>
+        <p className="text-xs text-zinc-500 mb-4">Download and manage offline speech-to-text models. Models run locally — no data leaves your machine.</p>
+
+        {error && (
+          <div className="flex items-center gap-2 p-2.5 bg-red-500/10 border border-red-500/20 rounded-lg mb-3">
+            <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+            <p className="text-[11px] text-red-400">{error}</p>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          {models.map((model) => (
+            <div key={model.id} className="bg-[#0A0A0B] rounded-lg px-3 py-3 border border-[#1E1E22]">
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <Mic className="w-3.5 h-3.5 text-zinc-500" />
+                  <span className="text-xs text-zinc-300 font-medium">{model.name}</span>
+                  {model.active && (
+                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wide bg-emerald-500/10 text-emerald-400">
+                      active
+                    </span>
+                  )}
+                  {model.default && !model.active && (
+                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wide bg-primary/10 text-primary">
+                      recommended
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-zinc-600">{model.size}</span>
+              </div>
+
+              <div className="flex items-center gap-3 text-[10px] text-zinc-500 mb-2">
+                <span>Accuracy: {model.accuracy}</span>
+                <span>Min RAM: {model.minRAM}</span>
+                <span>Language: {model.language}</span>
+              </div>
+
+              {/* Actions row */}
+              <div className="flex items-center gap-2">
+                {model.downloaded ? (
+                  <>
+                    {!model.active && (
+                      <button
+                        onClick={() => handleActivate(model.id)}
+                        className="text-[10px] text-primary hover:underline"
+                      >
+                        Activate
+                      </button>
+                    )}
+                    {model.active && (
+                      <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+                        <CheckCircle2 className="w-3 h-3" /> Active
+                      </span>
+                    )}
+                    <button
+                      onClick={() => handleDelete(model.id)}
+                      disabled={deleting === model.id}
+                      className="text-[10px] text-zinc-600 hover:text-red-400 transition-colors ml-auto"
+                    >
+                      {deleting === model.id ? "Deleting..." : "Delete"}
+                    </button>
+                  </>
+                ) : downloading === model.id ? (
+                  <div className="flex items-center gap-2 w-full">
+                    <div className="flex-1 h-1.5 bg-[#1E1E22] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-300"
+                        style={{ width: `${downloadProgress}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-primary shrink-0">{downloadProgress}%</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleDownload(model.id)}
+                    className="flex items-center gap-1.5 text-[10px] text-primary hover:underline"
+                  >
+                    <Download className="w-3 h-3" /> Download
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {models.length === 0 && (
+          <div className="bg-[#0A0A0B] rounded-lg p-6 border border-[#1E1E22] text-center">
+            <Mic className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
+            <p className="text-xs text-zinc-500">No voice models available</p>
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-[#1E1E22] pt-6">
+        <h3 className="text-sm font-semibold text-white mb-1">Active Model</h3>
+        {settings?.stt?.activeModel ? (
+          <div className="bg-[#0A0A0B] rounded-lg px-3 py-2.5 border border-[#1E1E22]">
+            <p className="text-xs text-zinc-400">
+              Model: <span className="text-primary font-medium">{settings.stt.activeModel}</span>
+            </p>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Sample Rate: <span className="text-zinc-300 font-medium">{settings.stt.sampleRate} Hz</span>
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-zinc-600 bg-[#0A0A0B] rounded-lg px-3 py-2.5 border border-[#1E1E22]">
+            No active voice model. Download and activate one above.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -296,55 +722,55 @@ function AboutSettings() {
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-bold text-white mb-1">GetThatQuick</h3>
-        <p className="text-xs text-slate-500">Self-hosted prompt workbench</p>
+        <p className="text-xs text-zinc-500">Self-hosted prompt workbench</p>
       </div>
-      <div className="bg-[#1E1E1E] rounded-lg p-4 space-y-2">
+      <div className="bg-[#0A0A0B] rounded-lg p-4 space-y-2 border border-[#1E1E22]">
         <div className="flex justify-between text-xs">
-          <span className="text-slate-500">Version</span>
-          <span className="text-slate-300">0.0.1-alpha</span>
+          <span className="text-zinc-500">Version</span>
+          <span className="text-zinc-300">0.0.1-alpha</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-slate-500">Runtime</span>
-          <span className="text-slate-300">Bun + Vite</span>
+          <span className="text-zinc-500">Runtime</span>
+          <span className="text-zinc-300">Bun + Vite</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-slate-500">License</span>
-          <span className="text-slate-300">MIT</span>
+          <span className="text-zinc-500">License</span>
+          <span className="text-zinc-300">MIT</span>
         </div>
       </div>
-      <div className="border-t border-[#333] pt-6">
+      <div className="border-t border-[#1E1E22] pt-6">
         <h3 className="text-sm font-semibold text-white mb-3">Links</h3>
         <div className="space-y-2">
           <a
             href="https://github.com/getthatquick/getthatquick"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 bg-[#1E1E1E] rounded-lg px-3 py-2.5 text-xs text-slate-300 hover:bg-white/6 transition-colors group"
+            className="flex items-center gap-3 bg-[#0A0A0B] rounded-lg px-3 py-2.5 text-xs text-zinc-300 hover:bg-white/4 transition-colors group border border-[#1E1E22]"
           >
-            <Github className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
+            <Github className="w-4 h-4 text-zinc-500 group-hover:text-white transition-colors" />
             <div className="flex-1">
               <span className="font-medium">GitHub Repository</span>
-              <p className="text-[10px] text-slate-600 mt-0.5">Star, fork, or contribute</p>
+              <p className="text-[10px] text-zinc-600 mt-0.5">Star, fork, or contribute</p>
             </div>
-            <ExternalLink className="w-3 h-3 text-slate-600" />
+            <ExternalLink className="w-3 h-3 text-zinc-600" />
           </a>
           <a
             href="https://github.com/getthatquick/getthatquick/wiki"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 bg-[#1E1E1E] rounded-lg px-3 py-2.5 text-xs text-slate-300 hover:bg-white/6 transition-colors group"
+            className="flex items-center gap-3 bg-[#0A0A0B] rounded-lg px-3 py-2.5 text-xs text-zinc-300 hover:bg-white/4 transition-colors group border border-[#1E1E22]"
           >
-            <BookOpen className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
+            <BookOpen className="w-4 h-4 text-zinc-500 group-hover:text-white transition-colors" />
             <div className="flex-1">
               <span className="font-medium">Tutorial & Docs</span>
-              <p className="text-[10px] text-slate-600 mt-0.5">Getting started guide and documentation</p>
+              <p className="text-[10px] text-zinc-600 mt-0.5">Getting started guide and documentation</p>
             </div>
-            <ExternalLink className="w-3 h-3 text-slate-600" />
+            <ExternalLink className="w-3 h-3 text-zinc-600" />
           </a>
         </div>
       </div>
-      <div className="border-t border-[#333] pt-6">
-        <p className="text-xs text-slate-500 leading-relaxed">
+      <div className="border-t border-[#1E1E22] pt-6">
+        <p className="text-xs text-zinc-500 leading-relaxed">
           A local-first, self-hosted prompt toolkit designed for developers. Manage prompts, templates, and chat sessions — all running on your machine.
         </p>
       </div>
@@ -352,28 +778,34 @@ function AboutSettings() {
   );
 }
 
-const settingsContent: Record<SettingsCategory, React.ComponentType> = {
+const settingsContent: Record<SettingsCategory, React.ComponentType<{ settings?: SettingsType | null; onUpdateSettings?: (u: Partial<SettingsType>) => Promise<void>; onTestProvider?: (c: { apiKey: string; model: string; baseUrl: string }) => Promise<boolean> }>> = {
   general: GeneralSettings,
   templates: TemplateSettings,
-  models: ModelSettings,
+  models: ModelSettings as React.ComponentType<{ settings?: SettingsType | null; onUpdateSettings?: (u: Partial<SettingsType>) => Promise<void>; onTestProvider?: (c: { apiKey: string; model: string; baseUrl: string }) => Promise<boolean> }>,
+  voice: VoiceSettings,
   backup: BackupSettings,
   about: AboutSettings,
 };
 
-export function SettingsOverlay({ onClose }: SettingsOverlayProps) {
+/**
+ * Full-screen settings overlay with category navigation.
+ *
+ * @param props - {@link SettingsOverlayProps}
+ */
+export function SettingsOverlay({ onClose, settings, onUpdateSettings, onTestProvider, settingsLoading }: SettingsOverlayProps) {
   const [active, setActive] = useState<SettingsCategory>("general");
   const Content = settingsContent[active];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel */}
-      <div className="relative z-10 w-[720px] max-w-[90vw] h-[520px] max-h-[85vh] bg-[#1E1E1E] rounded-2xl border border-[#333] shadow-2xl flex overflow-hidden">
+      <div className="relative z-10 w-[720px] max-w-[90vw] h-[520px] max-h-[85vh] bg-[#0E0E10] rounded-2xl border border-[#1E1E22] shadow-2xl flex overflow-hidden">
         {/* Left nav */}
-        <nav className="w-48 shrink-0 border-r border-[#333] p-3 flex flex-col gap-0.5">
-          <h2 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 px-3 pt-2 pb-3">
+        <nav className="w-48 shrink-0 border-r border-[#1E1E22] p-3 flex flex-col gap-0.5">
+          <h2 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-3 pt-2 pb-3">
             Settings
           </h2>
           {categories.map((cat) => (
@@ -384,29 +816,37 @@ export function SettingsOverlay({ onClose }: SettingsOverlayProps) {
                 "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left",
                 active === cat.id
                   ? "bg-white/8 text-white"
-                  : "text-slate-400 hover:bg-white/4 hover:text-slate-200"
+                  : "text-zinc-400 hover:bg-white/4 hover:text-zinc-200"
               )}
             >
               <cat.icon className="w-3.5 h-3.5 shrink-0" />
               {cat.label}
-              {active === cat.id && <ChevronRight className="w-3 h-3 ml-auto text-slate-600" />}
+              {active === cat.id && <ChevronRight className="w-3 h-3 ml-auto text-zinc-600" />}
             </button>
           ))}
         </nav>
 
         {/* Content */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#333]">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#1E1E22]">
             <h2 className="text-sm font-semibold text-white capitalize">{active}</h2>
             <button
               onClick={onClose}
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:text-white hover:bg-white/8 transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/8 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-6">
-            <Content />
+            {settingsLoading ? (
+              <div className="flex items-center justify-center h-full text-xs text-zinc-500">Loading settings...</div>
+            ) : (
+              <Content
+                settings={settings}
+                onUpdateSettings={onUpdateSettings}
+                onTestProvider={onTestProvider}
+              />
+            )}
           </div>
         </div>
       </div>

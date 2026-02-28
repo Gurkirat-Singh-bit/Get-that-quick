@@ -31,6 +31,7 @@ export function listSessions(): SessionMeta[] {
         id: s.id,
         title: s.title,
         templateId: s.templateId,
+        projectId: s.projectId ?? null,
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
         messageCount: s.messages.length,

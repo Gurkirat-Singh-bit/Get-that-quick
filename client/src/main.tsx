@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Application entry point.
+ *
+ * Mounts the React root into the DOM and wraps the app in StrictMode.
+ *
+ * @module main
+ */
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/plus-jakarta-sans'

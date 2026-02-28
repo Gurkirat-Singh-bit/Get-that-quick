@@ -4,12 +4,22 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── Custom font face (user-dropped fonts go to public/fonts/) ── */
+@font-face {
+  font-family: "GTQ Custom";
+  src: url("/fonts/custom-font.woff2") format("woff2"),
+       url("/fonts/custom-font.woff") format("woff"),
+       url("/fonts/custom-font.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 @theme {
   --color-primary: #A5D8FF;
   --color-primary-foreground: #0f172a;
   --color-primary-dark: #7AB8E0;
   --color-background: #F0F2F5;
-  --color-background-dark: #121212;
+  --color-background-dark: #0A0A0B;
   --color-card: #ffffff;
   --color-card-foreground: #0f172a;
   --color-card-yellow: #FFE58F;
@@ -19,12 +29,12 @@
   --color-muted-foreground: #64748b;
   --color-border: #e2e8f0;
   --color-ring: #A5D8FF;
-  --color-sidebar-bg: #2D2D2D;
-  --color-sidebar-border: #3D3D3D;
-  --color-shell-bg: #2D2D2D;
-  --color-shell-border: #3D3D3D;
+  --color-sidebar-bg: #111113;
+  --color-sidebar-border: #1E1E22;
+  --color-shell-bg: #111113;
+  --color-shell-border: #1E1E22;
 
-  --font-display: "Plus Jakarta Sans", sans-serif;
+  --font-display: "GTQ Custom", "Inter", "Plus Jakarta Sans", system-ui, sans-serif;
 
   --radius-sm: 12px;
   --radius-md: 16px;
@@ -146,35 +156,35 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
+  --background: oklch(0.10 0 0);
+  --foreground: oklch(0.93 0 0);
+  --card: oklch(0.14 0 0);
+  --card-foreground: oklch(0.93 0 0);
+  --popover: oklch(0.14 0 0);
+  --popover-foreground: oklch(0.93 0 0);
   --primary: #A5D8FF;
   --primary-foreground: #0f172a;
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.18 0 0);
+  --secondary-foreground: oklch(0.93 0 0);
+  --muted: oklch(0.18 0 0);
+  --muted-foreground: oklch(0.65 0 0);
+  --accent: oklch(0.18 0 0);
+  --accent-foreground: oklch(0.93 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 10%);
   --ring: #A5D8FF;
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar: oklch(0.12 0 0);
+  --sidebar-foreground: oklch(0.93 0 0);
   --sidebar-primary: #A5D8FF;
   --sidebar-primary-foreground: #0f172a;
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-accent: oklch(0.18 0 0);
+  --sidebar-accent-foreground: oklch(0.93 0 0);
+  --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: #A5D8FF;
 }

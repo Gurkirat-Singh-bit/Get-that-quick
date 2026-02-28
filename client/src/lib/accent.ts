@@ -1,12 +1,24 @@
+/**
+ * @fileoverview Accent colour system.
+ *
+ * Provides preset accent colours, localStorage persistence,
+ * and runtime CSS variable application for theming.
+ *
+ * @module lib/accent
+ */
+
 const ACCENT_KEY = "gtq_accent";
 const DEFAULT = "#A5D8FF";
 
 export const accentPresets = [
   { hex: "#A5D8FF", name: "Icy Blue" },
-  { hex: "#AFD0D6", name: "Light Blue" },
-  { hex: "#BFB6BB", name: "Pale Slate" },
-  { hex: "#C49799", name: "Rosy Taupe" },
-  { hex: "#36393B", name: "Gunmetal" },
+  { hex: "#7C3AED", name: "Violet" },
+  { hex: "#10B981", name: "Emerald" },
+  { hex: "#F59E0B", name: "Amber" },
+  { hex: "#EF4444", name: "Rose" },
+  { hex: "#EC4899", name: "Pink" },
+  { hex: "#06B6D4", name: "Cyan" },
+  { hex: "#8B5CF6", name: "Purple" },
 ];
 
 export function getAccent(): string {

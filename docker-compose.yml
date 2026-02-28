@@ -1,0 +1,28 @@
+# ── GetThatQuick — Docker Compose ──────────────────────────────────────────
+#
+# Single-container setup. Data is persisted in a named volume.
+#
+# Usage:
+#   docker compose up --build        # Build & start
+#   docker compose up -d             # Start in background
+#   docker compose down              # Stop
+#   docker compose down -v           # Stop & remove data
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: getthatquick
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - gtq-data:/data
+    environment:
+      - PORT=3000
+      - DATA_DIR=/data
+    restart: unless-stopped
+
+volumes:
+  gtq-data:
+    driver: local

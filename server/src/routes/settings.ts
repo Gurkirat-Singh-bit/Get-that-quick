@@ -27,6 +27,18 @@ settings.get("/", (c) => {
 // Update settings (deep merge)
 settings.put("/", async (c) => {
   const body = await c.req.json();
+
+  // Prevent masked API keys from overwriting real ones
+  if (body.ai?.providers) {
+    const current = getSettings();
+    for (const [name, provider] of Object.entries(body.ai.providers) as [string, any][]) {
+      if (provider.apiKey && (provider.apiKey.includes("...") || provider.apiKey === "****")) {
+        // Keep the existing key if the incoming one is masked
+        provider.apiKey = current.ai.providers[name]?.apiKey ?? "";
+      }
+    }
+  }
+
   const updated = updateSettings(body);
   return c.json({ ok: true, data: updated });
 });

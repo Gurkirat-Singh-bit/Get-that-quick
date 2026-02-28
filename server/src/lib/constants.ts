@@ -23,9 +23,9 @@ export const DEFAULT_SETTINGS: Settings = {
         model: "gpt-4o",
         baseUrl: "https://api.openai.com/v1",
       },
-      custom: {
+      ollama: {
         apiKey: "",
-        model: "",
+        model: "llama3",
         baseUrl: "http://localhost:11434/v1",
       },
     },

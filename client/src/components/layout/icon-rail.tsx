@@ -1,9 +1,18 @@
+/**
+ * @fileoverview Vertical icon rail — fixed at the left edge of the dashboard.
+ *
+ * Contains logo, new-chat shortcut, sidebar toggles, and the settings button.
+ * Uses modern Lucide icons for a polished look.
+ *
+ * @module components/layout/icon-rail
+ */
+
 import {
-  Zap,
-  MessageSquare,
-  BookTemplate,
-  SquarePen,
-  Settings,
+  Sparkles,
+  MessagesSquare,
+  PenLine,
+  FolderKanban,
+  SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -11,27 +20,44 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { PanelState } from "@/pages/dashboard";
 
+/** Props accepted by {@link IconRail}. */
 interface IconRailProps {
-  panels: PanelState;
-  onTogglePanel: (side: "left" | "right") => void;
+  /** Whether the chats panel is open. */
+  chatsOpen: boolean;
+  /** Whether the projects view is active. */
+  projectsOpen: boolean;
+  /** Toggle the chats panel. */
+  onToggleChats: () => void;
+  /** Toggle the projects view. */
+  onToggleProjects: () => void;
+  /** Open the settings overlay. */
   onSettingsClick: () => void;
+  /** Create a new chat session. */
+  onNewChat: () => void;
 }
 
-export function IconRail({ panels, onTogglePanel, onSettingsClick }: IconRailProps) {
+/**
+ * Slim icon sidebar rendered at the very left of the app shell.
+ *
+ * @param props - {@link IconRailProps}
+ */
+export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProjects, onSettingsClick, onNewChat }: IconRailProps) {
   return (
-    <aside className="w-14 flex flex-col items-center py-5 gap-6 shrink-0 bg-[#1E1E1E]">
+    <aside className="w-14 flex flex-col items-center py-5 gap-1.5 shrink-0 bg-[#0A0A0B]">
       {/* Logo */}
-      <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center">
-        <Zap className="w-4 h-4 text-primary" />
+      <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center mb-2">
+        <Sparkles className="w-4 h-4 text-primary" />
       </div>
 
       {/* New Chat */}
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
-          <button className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 hover:text-white hover:bg-white/5 transition-all">
-            <SquarePen className="w-[18px] h-[18px]" />
+          <button
+            onClick={onNewChat}
+            className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-white hover:bg-white/5 transition-all"
+          >
+            <PenLine className="w-[18px] h-[18px]" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>
@@ -39,43 +65,43 @@ export function IconRail({ panels, onTogglePanel, onSettingsClick }: IconRailPro
         </TooltipContent>
       </Tooltip>
 
-      {/* Chats / Sessions (left sidebar) */}
+      {/* Chats / Sessions */}
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
           <button
-            onClick={() => onTogglePanel("left")}
+            onClick={onToggleChats}
             className={cn(
               "w-9 h-9 flex items-center justify-center rounded-xl transition-all",
-              panels.left
+              chatsOpen
                 ? "bg-white/10 text-white"
-                : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
+                : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
             )}
           >
-            <MessageSquare className="w-[18px] h-[18px]" />
+            <MessagesSquare className="w-[18px] h-[18px]" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>
-          Sessions
+          Chats
         </TooltipContent>
       </Tooltip>
 
-      {/* Templates (right sidebar) */}
+      {/* Projects */}
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
           <button
-            onClick={() => onTogglePanel("right")}
+            onClick={onToggleProjects}
             className={cn(
               "w-9 h-9 flex items-center justify-center rounded-xl transition-all",
-              panels.right
+              projectsOpen
                 ? "bg-white/10 text-white"
-                : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
+                : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
             )}
           >
-            <BookTemplate className="w-[18px] h-[18px]" />
+            <FolderKanban className="w-[18px] h-[18px]" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>
-          Templates
+          Projects
         </TooltipContent>
       </Tooltip>
 
@@ -87,9 +113,9 @@ export function IconRail({ panels, onTogglePanel, onSettingsClick }: IconRailPro
         <TooltipTrigger asChild>
           <button
             onClick={onSettingsClick}
-            className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-all"
+            className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-all"
           >
-            <Settings className="w-[18px] h-[18px]" />
+            <SlidersHorizontal className="w-[18px] h-[18px]" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>

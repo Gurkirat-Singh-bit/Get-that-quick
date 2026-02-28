@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build artifacts
+client/dist/
+
+# Test assets
+test/model/
+test/model-spk/
+test/__pycache__/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+
+# Docs
+docs/
+*.md
+!server/seed/*.md

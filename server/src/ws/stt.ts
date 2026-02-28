@@ -10,8 +10,8 @@
 
 import type { ServerWebSocket } from "bun";
 import * as vosk from "../services/vosk";
-import { isModelDownloaded } from "../services/models";
-import { getSettings } from "../services/config";
+import { isModelDownloaded, listModels } from "../services/models";
+import { getSettings, updateSettings } from "../services/config";
 import type { TranscriptEvent, STTError } from "@shared/types";
 
 /** Per-connection state attached to the WebSocket. */
@@ -24,15 +24,25 @@ export interface STTSessionData {
 
 /** Called when a WebSocket connection is opened at /ws/stt. */
 export function handleSTTOpen(ws: ServerWebSocket<STTSessionData>): void {
-  const { stt } = getSettings();
+  const settings = getSettings();
+  let activeModel = settings.stt.activeModel;
 
-  if (!stt.activeModel || !isModelDownloaded(stt.activeModel)) {
-    sendError(
-      ws,
-      "No speech model downloaded. Go to Settings to download one."
-    );
-    ws.close(1008, "No model available");
-    return;
+  // If no model is explicitly active, try to find any downloaded model
+  if (!activeModel || !isModelDownloaded(activeModel)) {
+    const models = listModels("");
+    const downloaded = models.find((m) => m.downloaded);
+    if (downloaded) {
+      activeModel = downloaded.id;
+      // Persist the auto-activation
+      updateSettings({ stt: { ...settings.stt, activeModel } });
+    } else {
+      sendError(
+        ws,
+        "No speech model downloaded. Go to Settings to download one."
+      );
+      ws.close(1008, "No model available");
+      return;
+    }
   }
 
   try {

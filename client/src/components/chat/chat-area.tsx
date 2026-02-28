@@ -1,178 +1,164 @@
-import { useState, useRef, useEffect } from "react";
-import { BookTemplate, PanelRightOpen, PanelRightClose } from "lucide-react";
-import { Message, type ChatMessage } from "@/components/chat/message";
+/**
+ * @fileoverview Chat area — main conversation view.
+ *
+ * Renders the active session's messages with markdown formatting,
+ * a top bar showing the session title, and the pinned input bar.
+ * When no session is active it shows an empty-state prompt.
+ *
+ * @module components/chat/chat-area
+ */
+
+import { useRef, useEffect } from "react";
+import { Sparkles, AlertTriangle } from "lucide-react";
+import { Message } from "@/components/chat/message";
 import { ChatInput } from "@/components/chat/chat-input";
+import type { Session, Settings } from "@shared/types";
 
+/** Props accepted by {@link ChatArea}. */
 interface ChatAreaProps {
-  templatesOpen: boolean;
-  onToggleTemplates: () => void;
+  /** The currently active session (null = empty state). */
+  session: Session | null;
+  /** Called when the user sends a message. */
+  onSend: (content: string) => Promise<void>;
+  /** Whether the LLM is currently generating a response. */
+  generating: boolean;
+  /** Create a brand new chat session. */
+  onNewChat: () => Promise<void>;
+  /** Convert an assistant response into a template. */
+  onSaveAsTemplate?: (content: string) => void;
+  /** Current app settings — used to show config warnings. */
+  settings: Settings | null;
+  /** Open the settings overlay. */
+  onOpenSettings?: () => void;
 }
 
-const demoMessages: ChatMessage[] = [
-  {
-    id: "1",
-    role: "user",
-    content: "Can you help me write a utility function to deep merge objects in TypeScript?",
-  },
-  {
-    id: "2",
-    role: "assistant",
-    content: `Sure! Here's a type-safe deep merge utility:
-
-\`\`\`typescript
-type DeepPartial<T> = {
-  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
-};
-
-function deepMerge<T extends Record<string, unknown>>(
-  target: T,
-  source: DeepPartial<T>
-): T {
-  const output = { ...target };
-
-  for (const key in source) {
-    if (Object.prototype.hasOwnProperty.call(source, key)) {
-      const targetVal = target[key];
-      const sourceVal = source[key];
-
-      if (
-        targetVal &&
-        sourceVal &&
-        typeof targetVal === "object" &&
-        typeof sourceVal === "object" &&
-        !Array.isArray(targetVal)
-      ) {
-        (output as Record<string, unknown>)[key] = deepMerge(
-          targetVal as Record<string, unknown>,
-          sourceVal as Record<string, unknown>
-        );
-      } else {
-        (output as Record<string, unknown>)[key] = sourceVal;
-      }
-    }
-  }
-
-  return output;
-}
-\`\`\`
-
-### Key features
-
-- **Type-safe** — uses \`DeepPartial<T>\` so the source only allows valid keys
-- **Recursive** — handles nested objects of any depth
-- **Immutable** — returns a new object, never mutates inputs
-- **Array-aware** — arrays are replaced, not merged element-by-element
-
-### Usage example
-
-\`\`\`typescript
-const defaults = {
-  theme: { colors: { primary: "#FF5F38", bg: "#FFFFFF" } },
-  features: { darkMode: false, animations: true },
-};
-
-const userConfig = {
-  theme: { colors: { primary: "#3B82F6" } },
-  features: { darkMode: true },
-};
-
-const merged = deepMerge(defaults, userConfig);
-// => { theme: { colors: { primary: "#3B82F6", bg: "#FFFFFF" } },
-//      features: { darkMode: true, animations: true } }
-\`\`\`
-
-> **Note:** If you need to merge arrays deeply or handle \`Map\`/\`Set\`, consider using a library like [deepmerge](https://github.com/TehShrike/deepmerge).`,
-  },
-  {
-    id: "3",
-    role: "user",
-    content: "What are the time complexities of common data structures?",
-  },
-  {
-    id: "4",
-    role: "assistant",
-    content: `Here's a quick reference:
-
-| Data Structure | Access | Search | Insertion | Deletion |
-|---|---|---|---|---|
-| Array | O(1) | O(n) | O(n) | O(n) |
-| Linked List | O(n) | O(n) | O(1) | O(1) |
-| Hash Table | — | O(1) avg | O(1) avg | O(1) avg |
-| Binary Search Tree | O(log n) | O(log n) | O(log n) | O(log n) |
-| Heap | — | O(n) | O(log n) | O(log n) |
-
-A few things to keep in mind:
-
-1. **Hash Tables** have O(1) *average* case but O(n) worst case due to collisions
-2. **BST complexities** assume the tree is balanced — an unbalanced BST degrades to O(n)
-3. For **sorted data**, consider a balanced BST (AVL / Red-Black) or a skip list
-
-Want me to go deeper into any of these?`,
-  },
-];
-
-export function ChatArea({ templatesOpen, onToggleTemplates }: ChatAreaProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>(demoMessages);
+/**
+ * Main chat area component.
+ *
+ * @param props - {@link ChatAreaProps}
+ */
+export function ChatArea({
+  session,
+  onSend,
+  generating,
+  onNewChat,
+  onSaveAsTemplate,
+  settings,
+  onOpenSettings,
+}: ChatAreaProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  /** Auto-scroll when messages change. */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [session?.messages]);
 
-  const handleSend = (content: string) => {
-    const userMsg: ChatMessage = {
-      id: Date.now().toString(),
-      role: "user",
-      content,
-    };
-    setMessages((prev) => [
-      ...prev,
-      userMsg,
-      {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content:
-          "This is a **UI demo** — backend integration is coming soon. Your prompt toolkit will connect to local LLMs via the server.",
-      },
-    ]);
+  /** Derive config status flags. */
+  const activeProvider = settings?.ai?.provider;
+  const providerConfig = activeProvider ? settings?.ai?.providers?.[activeProvider] : null;
+  const llmConfigured = !!(providerConfig?.apiKey && providerConfig?.model);
+  const sttConfigured = !!settings?.stt?.activeModel;
+
+  /** Handle send from the input bar. */
+  const handleSend = async (content: string) => {
+    if (!session) {
+      // Auto-create a session on first message
+      await onNewChat();
+    }
+    await onSend(content);
   };
 
   return (
     <div className="flex-1 flex flex-col min-w-0 h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 shrink-0">
-        <h1 className="text-base font-bold tracking-tight text-slate-800 font-[var(--font-display)]">Auth Flow Refactor</h1>
-        <button
-          onClick={onToggleTemplates}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-primary hover:bg-primary/5 transition-colors"
-        >
-          <BookTemplate className="w-3.5 h-3.5" />
-          <span>Templates</span>
-          {templatesOpen ? (
-            <PanelRightClose className="w-3.5 h-3.5 ml-0.5" />
-          ) : (
-            <PanelRightOpen className="w-3.5 h-3.5 ml-0.5" />
-          )}
-        </button>
+      <div className="flex items-center justify-between px-6 py-3 border-b border-[#E2E4E9] shrink-0">
+        <h1 className="text-base font-bold tracking-tight text-zinc-800">
+          {session?.title ?? "New Chat"}
+        </h1>
       </div>
 
       {/* Messages — scrollable middle */}
       <div className="flex-1 overflow-y-auto min-h-0">
-        <div className="max-w-3xl mx-auto px-6 py-6">
-          {messages.map((msg, i) => (
-            <div key={msg.id}>
-              <Message message={msg} />
-              {i < messages.length - 1 && msg.role === "assistant" && (
-                <div className="border-t border-slate-100 my-1" />
-              )}
+        {!session || session.messages.length === 0 ? (
+          /* Empty state */
+          <div className="flex flex-col items-center justify-center h-full text-center px-6">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+              <Sparkles className="w-7 h-7 text-primary" />
             </div>
-          ))}
-          <div ref={bottomRef} />
-        </div>
+            <h2 className="text-lg font-bold text-zinc-800 mb-1">GetThatQuick</h2>
+            <p className="text-sm text-zinc-500 max-w-sm mb-6">
+              Your self-hosted prompt workbench. Type a message to start a new conversation.
+            </p>
+
+            {/* Config warning banners */}
+            {settings && (!llmConfigured || !sttConfigured) && (
+              <div className="flex flex-col gap-2 max-w-sm w-full">
+                {!llmConfigured && (
+                  <button
+                    type="button"
+                    onClick={onOpenSettings}
+                    className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-left transition hover:bg-amber-100"
+                  >
+                    <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-amber-800">LLM provider not configured</p>
+                      <p className="text-xs text-amber-700 mt-0.5">
+                        Add an API key and select a model in Settings to start chatting.
+                      </p>
+                    </div>
+                  </button>
+                )}
+                {!sttConfigured && (
+                  <button
+                    type="button"
+                    onClick={onOpenSettings}
+                    className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-left transition hover:bg-amber-100"
+                  >
+                    <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-amber-800">Voice model not configured</p>
+                      <p className="text-xs text-amber-700 mt-0.5">
+                        Download and activate a Vosk model in Settings to use speech-to-text.
+                      </p>
+                    </div>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="max-w-3xl mx-auto px-6 py-6">
+            {session.messages.map((msg, i) => (
+              <div key={msg.id}>
+                <Message
+                  message={{ id: msg.id, role: msg.role, content: msg.content }}
+                  onSaveAsTemplate={msg.role === "assistant" ? onSaveAsTemplate : undefined}
+                />
+                {i < session.messages.length - 1 && msg.role === "assistant" && (
+                  <div className="border-t border-[#E2E4E9] my-1" />
+                )}
+              </div>
+            ))}
+
+            {/* Streaming indicator */}
+            {generating && (
+              <div className="flex items-center gap-2 py-3 text-xs text-zinc-500">
+                <div className="flex gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+                Generating…
+              </div>
+            )}
+
+            <div ref={bottomRef} />
+          </div>
+        )}
       </div>
 
       {/* Input — always pinned at bottom */}
-      <ChatInput onSend={handleSend} />
+      <ChatInput onSend={handleSend} disabled={generating} />
     </div>
   );
 }

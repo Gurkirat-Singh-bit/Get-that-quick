@@ -37,6 +37,12 @@ models.post("/:id/download", async (c) => {
           }),
         });
       });
+      // Auto-activate if no model is currently active
+      const settings = getSettings();
+      if (!settings.stt.activeModel) {
+        updateSettings({ stt: { ...settings.stt, activeModel: id } });
+      }
+
       await stream.writeSSE({
         data: JSON.stringify({ status: "complete" }),
       });

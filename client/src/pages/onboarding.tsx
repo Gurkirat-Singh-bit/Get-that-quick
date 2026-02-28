@@ -1,4 +1,14 @@
-import { useState } from "react";
+/**
+ * @fileoverview Onboarding wizard — first-run setup flow.
+ *
+ * A 5-step wizard (Welcome → Voice Model → LLM Provider → API Keys → Done)
+ * that guides users through initial configuration. All selections are
+ * persisted to the server via the settings and models API.
+ *
+ * @module pages/onboarding
+ */
+
+import { useState, useEffect, useCallback } from "react";
 import {
   Zap,
   Mic,
@@ -7,12 +17,16 @@ import {
   ChevronRight,
   ChevronLeft,
   Check,
-  Upload,
-  FolderOpen,
+  Download,
   Globe,
   Shield,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import * as api from "@/api/client";
+import type { VoskModelInfo, AIProviderConfig } from "@shared/types";
 
 type Step = "welcome" | "vosk" | "llm" | "keys" | "done";
 
@@ -26,6 +40,18 @@ const steps: { id: Step; label: string; icon: React.ElementType }[] = [
 
 interface OnboardingProps {
   onComplete: () => void;
+}
+
+/** Shared onboarding state passed to step components. */
+interface OnboardingState {
+  /** Which LLM provider the user picked. */
+  selectedProvider: string;
+  /** Provider configs accumulated during onboarding. */
+  providerConfigs: Record<string, AIProviderConfig>;
+  /** Selected Vosk model ID. */
+  selectedVoskModel: string;
+  /** Whether a Vosk model was downloaded during this flow. */
+  voskDownloaded: boolean;
 }
 
 function WelcomeStep() {
@@ -60,14 +86,63 @@ function WelcomeStep() {
   );
 }
 
-function VoskStep() {
-  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+interface VoskStepProps {
+  selectedModel: string;
+  onSelectModel: (id: string) => void;
+  onModelDownloaded: () => void;
+}
 
-  const models = [
-    { id: "small", name: "vosk-model-small-en-us", size: "40 MB", desc: "Fast, lightweight — great for most use cases", recommended: true },
-    { id: "medium", name: "vosk-model-en-us", size: "1.8 GB", desc: "High accuracy, slower on low-end hardware" },
-    { id: "custom", name: "Custom model path", size: "—", desc: "Point to your own Vosk model directory" },
-  ];
+function VoskStep({ selectedModel, onSelectModel, onModelDownloaded }: VoskStepProps) {
+  const [models, setModels] = useState<VoskModelInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.listModels()
+      .then((m) => {
+        setModels(m);
+        // Auto-select the default model if none selected
+        if (!selectedModel) {
+          const def = m.find((x) => x.default);
+          if (def) onSelectModel(def.id);
+        }
+      })
+      .catch((err) => console.error("[VoskStep] Failed to load models:", err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleDownload = async (id: string) => {
+    setDownloading(id);
+    setDownloadProgress(0);
+    setDownloadError(null);
+    try {
+      await api.downloadModel(id, (info) => {
+        setDownloadProgress(info.percent);
+      });
+      // Refresh model list to show downloaded status
+      const updated = await api.listModels();
+      setModels(updated);
+      // Activate the model
+      await api.activateModel(id);
+      onSelectModel(id);
+      onModelDownloaded();
+    } catch (err: any) {
+      setDownloadError(err.message || "Download failed");
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 text-primary animate-spin" />
+        <span className="ml-2 text-sm text-slate-400">Loading models...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-lg mx-auto">
@@ -82,7 +157,7 @@ function VoskStep() {
         {models.map((model) => (
           <button
             key={model.id}
-            onClick={() => setSelectedModel(model.id)}
+            onClick={() => onSelectModel(model.id)}
             className={cn(
               "w-full flex items-start gap-3 p-4 rounded-xl border transition-colors text-left",
               selectedModel === model.id
@@ -100,52 +175,102 @@ function VoskStep() {
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-white">{model.name}</span>
                 <span className="text-[10px] text-slate-600">{model.size}</span>
-                {"recommended" in model && model.recommended && (
+                {model.default && (
                   <span className="text-[9px] font-medium bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
                     Recommended
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">{model.desc}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                {model.accuracy} · Min {model.minRAM} RAM
+              </p>
+              <div className="flex items-center gap-2 mt-1.5">
+                {model.downloaded ? (
+                  <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+                    <CheckCircle2 className="w-3 h-3" /> Downloaded
+                  </span>
+                ) : downloading === model.id ? (
+                  <div className="flex items-center gap-2 w-full">
+                    <div className="flex-1 h-1.5 bg-[#333] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-300"
+                        style={{ width: `${downloadProgress}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-primary shrink-0">{downloadProgress}%</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDownload(model.id); }}
+                    className="flex items-center gap-1 text-[10px] text-primary hover:underline"
+                  >
+                    <Download className="w-3 h-3" /> Download
+                  </button>
+                )}
+                {model.active && (
+                  <span className="text-[10px] text-emerald-400 font-medium">Active</span>
+                )}
+              </div>
             </div>
           </button>
         ))}
       </div>
 
-      {selectedModel === "custom" && (
-        <div className="bg-[#252525] border border-[#333] rounded-xl p-4">
-          <label className="text-xs font-medium text-slate-300 mb-2 block">Model Directory</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="/path/to/vosk-model"
-              className="flex-1 bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 placeholder:text-slate-600 outline-none focus:border-primary/40"
-            />
-            <button className="px-3 py-2 rounded-lg bg-white/5 text-slate-300 text-xs hover:bg-white/8 transition-colors">
-              <FolderOpen className="w-4 h-4" />
-            </button>
-          </div>
+      {downloadError && (
+        <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg mb-4">
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+          <p className="text-xs text-red-400">{downloadError}</p>
         </div>
       )}
 
-      {selectedModel && selectedModel !== "custom" && (
-        <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
-          <Upload className="w-3.5 h-3.5" />
-          Download Model
-        </button>
-      )}
+      <p className="text-[11px] text-slate-600">
+        Voice input is optional. You can skip this step and download a model later in Settings.
+      </p>
     </div>
   );
 }
 
-function LLMStep() {
-  const [provider, setProvider] = useState<string | null>(null);
+interface LLMStepProps {
+  selectedProvider: string;
+  providerConfigs: Record<string, AIProviderConfig>;
+  onSelectProvider: (id: string) => void;
+  onUpdateConfig: (id: string, config: Partial<AIProviderConfig>) => void;
+}
 
-  const providers = [
-    { id: "ollama", name: "Ollama (Local)", desc: "Run models locally — llama3, codellama, mistral, etc.", default: "http://localhost:11434" },
-    { id: "openrouter", name: "OpenRouter", desc: "Access thousands of models via API — Claude, GPT-4, Gemini, etc.", default: "" },
-    { id: "custom", name: "Custom Endpoint", desc: "Any OpenAI-compatible API endpoint", default: "" },
-  ];
+const LLM_PROVIDERS = [
+  {
+    id: "ollama",
+    name: "Ollama (Local)",
+    desc: "Run models locally — llama3, codellama, mistral, etc.",
+    baseUrl: "http://localhost:11434/v1",
+    defaultModel: "llama3",
+  },
+  {
+    id: "openrouter",
+    name: "OpenRouter",
+    desc: "Access thousands of models via API — Claude, GPT-4, Gemini, etc.",
+    baseUrl: "https://openrouter.ai/api/v1",
+    defaultModel: "anthropic/claude-sonnet-4",
+  },
+  {
+    id: "openai",
+    name: "OpenAI",
+    desc: "GPT-4o, GPT-4, GPT-3.5 — direct from OpenAI.",
+    baseUrl: "https://api.openai.com/v1",
+    defaultModel: "gpt-4o",
+  },
+];
+
+function LLMStep({ selectedProvider, providerConfigs, onSelectProvider, onUpdateConfig }: LLMStepProps) {
+  const handleSelect = (id: string) => {
+    const preset = LLM_PROVIDERS.find((p) => p.id === id);
+    if (!preset) return;
+    onSelectProvider(id);
+    // Initialize config if not already set
+    if (!providerConfigs[id]) {
+      onUpdateConfig(id, { apiKey: "", model: preset.defaultModel, baseUrl: preset.baseUrl });
+    }
+  };
 
   return (
     <div className="max-w-lg mx-auto">
@@ -157,22 +282,22 @@ function LLMStep() {
       </div>
 
       <div className="space-y-2 mb-6">
-        {providers.map((p) => (
+        {LLM_PROVIDERS.map((p) => (
           <button
             key={p.id}
-            onClick={() => setProvider(p.id)}
+            onClick={() => handleSelect(p.id)}
             className={cn(
               "w-full flex items-start gap-3 p-4 rounded-xl border transition-colors text-left",
-              provider === p.id
+              selectedProvider === p.id
                 ? "bg-primary/5 border-primary/30"
                 : "bg-[#252525] border-[#333] hover:border-[#444]"
             )}
           >
             <div className={cn(
               "w-5 h-5 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center",
-              provider === p.id ? "border-primary" : "border-slate-600"
+              selectedProvider === p.id ? "border-primary" : "border-slate-600"
             )}>
-              {provider === p.id && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+              {selectedProvider === p.id && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
             </div>
             <div className="flex-1">
               <span className="text-xs font-semibold text-white">{p.name}</span>
@@ -182,50 +307,87 @@ function LLMStep() {
         ))}
       </div>
 
-      {provider === "ollama" && (
-        <div className="bg-[#252525] border border-[#333] rounded-xl p-4">
-          <label className="text-xs font-medium text-slate-300 mb-2 block">Ollama Endpoint</label>
-          <input
-            type="text"
-            defaultValue="http://localhost:11434"
-            className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 outline-none focus:border-primary/40"
-          />
-          <p className="text-[10px] text-slate-600 mt-2">Make sure Ollama is running and accessible</p>
-        </div>
-      )}
-
-      {provider === "openrouter" && (
-        <div className="bg-[#252525] border border-[#333] rounded-xl p-4">
-          <label className="text-xs font-medium text-slate-300 mb-2 block">OpenRouter API Key</label>
-          <input
-            type="password"
-            placeholder="sk-or-..."
-            className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 placeholder:text-slate-600 outline-none focus:border-primary/40"
-          />
-          <p className="text-[10px] text-slate-600 mt-2">
-            Get your key at{" "}
-            <a href="https://openrouter.ai/keys" target="_blank" className="text-primary hover:underline">
-              openrouter.ai/keys
-            </a>
-          </p>
-        </div>
-      )}
-
-      {provider === "custom" && (
+      {selectedProvider === "ollama" && (
         <div className="bg-[#252525] border border-[#333] rounded-xl p-4 space-y-3">
           <div>
-            <label className="text-xs font-medium text-slate-300 mb-2 block">API Endpoint</label>
+            <label className="text-xs font-medium text-slate-300 mb-2 block">Ollama Endpoint</label>
             <input
               type="text"
-              placeholder="https://api.example.com/v1"
-              className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 placeholder:text-slate-600 outline-none focus:border-primary/40"
+              value={providerConfigs.ollama?.baseUrl || "http://localhost:11434/v1"}
+              onChange={(e) => onUpdateConfig("ollama", { baseUrl: e.target.value })}
+              className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 outline-none focus:border-primary/40"
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-300 mb-2 block">API Key (optional)</label>
+            <label className="text-xs font-medium text-slate-300 mb-2 block">Model</label>
+            <input
+              type="text"
+              value={providerConfigs.ollama?.model || "llama3"}
+              onChange={(e) => onUpdateConfig("ollama", { model: e.target.value })}
+              placeholder="llama3"
+              className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 placeholder:text-slate-600 outline-none focus:border-primary/40"
+            />
+          </div>
+          <p className="text-[10px] text-slate-600">Make sure Ollama is running and the model is pulled.</p>
+        </div>
+      )}
+
+      {selectedProvider === "openrouter" && (
+        <div className="bg-[#252525] border border-[#333] rounded-xl p-4 space-y-3">
+          <div>
+            <label className="text-xs font-medium text-slate-300 mb-2 block">OpenRouter API Key</label>
             <input
               type="password"
+              value={providerConfigs.openrouter?.apiKey || ""}
+              onChange={(e) => onUpdateConfig("openrouter", { apiKey: e.target.value })}
+              placeholder="sk-or-..."
+              className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 placeholder:text-slate-600 outline-none focus:border-primary/40"
+            />
+            <p className="text-[10px] text-slate-600 mt-2">
+              Get your key at{" "}
+              <a href="https://openrouter.ai/keys" target="_blank" className="text-primary hover:underline">
+                openrouter.ai/keys
+              </a>
+            </p>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-300 mb-2 block">Model</label>
+            <input
+              type="text"
+              value={providerConfigs.openrouter?.model || "anthropic/claude-sonnet-4"}
+              onChange={(e) => onUpdateConfig("openrouter", { model: e.target.value })}
+              placeholder="anthropic/claude-sonnet-4"
+              className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 placeholder:text-slate-600 outline-none focus:border-primary/40"
+            />
+          </div>
+        </div>
+      )}
+
+      {selectedProvider === "openai" && (
+        <div className="bg-[#252525] border border-[#333] rounded-xl p-4 space-y-3">
+          <div>
+            <label className="text-xs font-medium text-slate-300 mb-2 block">OpenAI API Key</label>
+            <input
+              type="password"
+              value={providerConfigs.openai?.apiKey || ""}
+              onChange={(e) => onUpdateConfig("openai", { apiKey: e.target.value })}
               placeholder="sk-..."
+              className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 placeholder:text-slate-600 outline-none focus:border-primary/40"
+            />
+            <p className="text-[10px] text-slate-600 mt-2">
+              Get your key at{" "}
+              <a href="https://platform.openai.com/api-keys" target="_blank" className="text-primary hover:underline">
+                platform.openai.com
+              </a>
+            </p>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-300 mb-2 block">Model</label>
+            <input
+              type="text"
+              value={providerConfigs.openai?.model || "gpt-4o"}
+              onChange={(e) => onUpdateConfig("openai", { model: e.target.value })}
+              placeholder="gpt-4o"
               className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 placeholder:text-slate-600 outline-none focus:border-primary/40"
             />
           </div>
@@ -235,64 +397,47 @@ function LLMStep() {
   );
 }
 
-function KeysStep() {
+interface KeysStepProps {
+  providerConfigs: Record<string, AIProviderConfig>;
+  onUpdateConfig: (id: string, config: Partial<AIProviderConfig>) => void;
+}
+
+function KeysStep({ providerConfigs, onUpdateConfig }: KeysStepProps) {
+  const providerMeta: Record<string, { label: string; placeholder: string; hint: string }> = {
+    openrouter: { label: "OpenRouter", placeholder: "sk-or-...", hint: "Get key at openrouter.ai/keys" },
+    openai: { label: "OpenAI", placeholder: "sk-...", hint: "Get key at platform.openai.com/api-keys" },
+    ollama: { label: "Ollama", placeholder: "(not needed for local)", hint: "No API key required for local Ollama" },
+  };
+
   return (
     <div className="max-w-lg mx-auto">
       <div className="mb-6">
         <h2 className="text-lg font-bold text-white mb-2">API Keys (Optional)</h2>
         <p className="text-sm text-slate-400">
-          Add any additional API keys you'd like to configure. These are optional and can be set later.
+          Review and configure API keys for your providers. These are optional for local models.
         </p>
       </div>
 
       <div className="space-y-4">
-        <div className="bg-[#252525] border border-[#333] rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Key className="w-3.5 h-3.5 text-primary" />
-            <label className="text-xs font-semibold text-white">OpenRouter</label>
-          </div>
-          <input
-            type="password"
-            placeholder="sk-or-..."
-            className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 placeholder:text-slate-600 outline-none focus:border-primary/40"
-          />
-        </div>
-
-        <div className="bg-[#252525] border border-[#333] rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Key className="w-3.5 h-3.5 text-primary" />
-            <label className="text-xs font-semibold text-white">OpenAI</label>
-          </div>
-          <input
-            type="password"
-            placeholder="sk-..."
-            className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 placeholder:text-slate-600 outline-none focus:border-primary/40"
-          />
-        </div>
-
-        <div className="bg-[#252525] border border-[#333] rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Key className="w-3.5 h-3.5 text-primary" />
-            <label className="text-xs font-semibold text-white">Anthropic</label>
-          </div>
-          <input
-            type="password"
-            placeholder="sk-ant-..."
-            className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 placeholder:text-slate-600 outline-none focus:border-primary/40"
-          />
-        </div>
-
-        <div className="bg-[#252525] border border-[#333] rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Key className="w-3.5 h-3.5 text-primary" />
-            <label className="text-xs font-semibold text-white">Google AI (Gemini)</label>
-          </div>
-          <input
-            type="password"
-            placeholder="AIza..."
-            className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 placeholder:text-slate-600 outline-none focus:border-primary/40"
-          />
-        </div>
+        {Object.entries(providerConfigs).map(([id, config]) => {
+          const meta = providerMeta[id] || { label: id, placeholder: "API key...", hint: "" };
+          return (
+            <div key={id} className="bg-[#252525] border border-[#333] rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Key className="w-3.5 h-3.5 text-primary" />
+                <label className="text-xs font-semibold text-white">{meta.label}</label>
+              </div>
+              <input
+                type="password"
+                value={config.apiKey || ""}
+                onChange={(e) => onUpdateConfig(id, { apiKey: e.target.value })}
+                placeholder={meta.placeholder}
+                className="w-full bg-[#1E1E1E] border border-[#333] rounded-lg py-2 px-3 text-xs text-slate-300 placeholder:text-slate-600 outline-none focus:border-primary/40"
+              />
+              <p className="text-[10px] text-slate-600 mt-2">{meta.hint}</p>
+            </div>
+          );
+        })}
       </div>
 
       <p className="text-[11px] text-slate-600 mt-4">
@@ -302,7 +447,19 @@ function KeysStep() {
   );
 }
 
-function DoneStep() {
+interface DoneStepProps {
+  state: OnboardingState;
+}
+
+function DoneStep({ state }: DoneStepProps) {
+  const providerLabels: Record<string, string> = {
+    ollama: "Ollama (Local)",
+    openrouter: "OpenRouter",
+    openai: "OpenAI",
+  };
+
+  const keysConfigured = Object.values(state.providerConfigs).filter((c) => c.apiKey.length > 0).length;
+
   return (
     <div className="flex flex-col items-center text-center max-w-md mx-auto">
       <div className="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center mb-6">
@@ -315,39 +472,121 @@ function DoneStep() {
       <div className="bg-[#252525] border border-[#333] rounded-xl p-4 w-full text-left space-y-2">
         <div className="flex justify-between text-xs">
           <span className="text-slate-500">Voice Model</span>
-          <span className="text-slate-300">vosk-model-small-en-us</span>
+          <span className="text-slate-300">
+            {state.voskDownloaded ? state.selectedVoskModel || "Downloaded" : "Skipped (can set later)"}
+          </span>
         </div>
         <div className="flex justify-between text-xs">
           <span className="text-slate-500">LLM Provider</span>
-          <span className="text-slate-300">Ollama (Local)</span>
+          <span className="text-slate-300">
+            {providerLabels[state.selectedProvider] || state.selectedProvider || "None selected"}
+          </span>
+        </div>
+        <div className="flex justify-between text-xs">
+          <span className="text-slate-500">Model</span>
+          <span className="text-slate-300">
+            {state.providerConfigs[state.selectedProvider]?.model || "—"}
+          </span>
         </div>
         <div className="flex justify-between text-xs">
           <span className="text-slate-500">API Keys</span>
-          <span className="text-slate-300">0 configured</span>
+          <span className="text-slate-300">{keysConfigured} configured</span>
         </div>
       </div>
     </div>
   );
 }
 
-const stepComponents: Record<Step, React.ComponentType> = {
-  welcome: WelcomeStep,
-  vosk: VoskStep,
-  llm: LLMStep,
-  keys: KeysStep,
-  done: DoneStep,
-};
-
 export function Onboarding({ onComplete }: OnboardingProps) {
   const [currentStep, setCurrentStep] = useState<Step>("welcome");
+  const [saving, setSaving] = useState(false);
+
+  // Onboarding state — accumulated across steps
+  const [state, setState] = useState<OnboardingState>({
+    selectedProvider: "openrouter",
+    providerConfigs: {
+      openrouter: { apiKey: "", model: "anthropic/claude-sonnet-4", baseUrl: "https://openrouter.ai/api/v1" },
+      openai: { apiKey: "", model: "gpt-4o", baseUrl: "https://api.openai.com/v1" },
+      ollama: { apiKey: "", model: "llama3", baseUrl: "http://localhost:11434/v1" },
+    },
+    selectedVoskModel: "",
+    voskDownloaded: false,
+  });
+
+  // Load current settings on mount to pre-fill
+  useEffect(() => {
+    api.getSettings().then((settings) => {
+      if (settings.ai?.providers && Object.keys(settings.ai.providers).length > 0) {
+        setState((prev) => ({
+          ...prev,
+          selectedProvider: settings.ai.provider || prev.selectedProvider,
+          providerConfigs: { ...prev.providerConfigs, ...settings.ai.providers },
+        }));
+      }
+      if (settings.stt?.activeModel) {
+        setState((prev) => ({ ...prev, selectedVoskModel: settings.stt.activeModel }));
+      }
+    }).catch(() => {});
+  }, []);
+
+  const handleSelectProvider = useCallback((id: string) => {
+    setState((prev) => ({ ...prev, selectedProvider: id }));
+  }, []);
+
+  const handleUpdateConfig = useCallback((id: string, updates: Partial<AIProviderConfig>) => {
+    setState((prev) => ({
+      ...prev,
+      providerConfigs: {
+        ...prev.providerConfigs,
+        [id]: { ...prev.providerConfigs[id], ...updates } as AIProviderConfig,
+      },
+    }));
+  }, []);
+
+  const handleSelectVoskModel = useCallback((id: string) => {
+    setState((prev) => ({ ...prev, selectedVoskModel: id }));
+  }, []);
+
+  const handleModelDownloaded = useCallback(() => {
+    setState((prev) => ({ ...prev, voskDownloaded: true }));
+  }, []);
 
   const currentIndex = steps.findIndex((s) => s.id === currentStep);
   const isFirst = currentIndex === 0;
   const isLast = currentIndex === steps.length - 1;
 
+  /** Save all settings to server and complete onboarding. */
+  const handleFinish = async () => {
+    setSaving(true);
+    try {
+      // Save AI provider settings
+      await api.updateSettings({
+        ai: {
+          provider: state.selectedProvider,
+          providers: state.providerConfigs,
+        },
+      });
+
+      // Activate selected Vosk model if one was chosen
+      if (state.selectedVoskModel) {
+        await api.updateSettings({
+          stt: { activeModel: state.selectedVoskModel, sampleRate: 16000 },
+        });
+      }
+
+      onComplete();
+    } catch (err) {
+      console.error("[Onboarding] Failed to save:", err);
+      // Still complete — user can fix in settings
+      onComplete();
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const goNext = () => {
     if (isLast) {
-      onComplete();
+      handleFinish();
       return;
     }
     setCurrentStep(steps[currentIndex + 1].id);
@@ -357,7 +596,40 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     if (!isFirst) setCurrentStep(steps[currentIndex - 1].id);
   };
 
-  const Content = stepComponents[currentStep];
+  const renderStep = () => {
+    switch (currentStep) {
+      case "welcome":
+        return <WelcomeStep />;
+      case "vosk":
+        return (
+          <VoskStep
+            selectedModel={state.selectedVoskModel}
+            onSelectModel={handleSelectVoskModel}
+            onModelDownloaded={handleModelDownloaded}
+          />
+        );
+      case "llm":
+        return (
+          <LLMStep
+            selectedProvider={state.selectedProvider}
+            providerConfigs={state.providerConfigs}
+            onSelectProvider={handleSelectProvider}
+            onUpdateConfig={handleUpdateConfig}
+          />
+        );
+      case "keys":
+        return (
+          <KeysStep
+            providerConfigs={state.providerConfigs}
+            onUpdateConfig={handleUpdateConfig}
+          />
+        );
+      case "done":
+        return <DoneStep state={state} />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="h-screen w-screen bg-[#1E1E1E] flex flex-col">
@@ -393,7 +665,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
       {/* Content */}
       <div className="flex-1 flex items-center justify-center px-8 overflow-y-auto">
-        <Content />
+        {renderStep()}
       </div>
 
       {/* Navigation */}
@@ -414,10 +686,22 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
         <button
           onClick={goNext}
-          className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-primary text-white text-xs font-semibold hover:brightness-110 transition-all"
+          disabled={saving}
+          className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-primary text-white text-xs font-semibold hover:brightness-110 transition-all disabled:opacity-50"
         >
-          {isLast ? "Get Started" : "Continue"}
-          {!isLast && <ChevronRight className="w-3.5 h-3.5" />}
+          {saving ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Saving...
+            </>
+          ) : isLast ? (
+            "Get Started"
+          ) : (
+            <>
+              Continue
+              <ChevronRight className="w-3.5 h-3.5" />
+            </>
+          )}
         </button>
       </div>
     </div>
