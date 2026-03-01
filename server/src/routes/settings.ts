@@ -3,6 +3,7 @@
 import { Hono } from "hono";
 import { getSettings, updateSettings } from "../services/config";
 import { testProvider as testLLMProvider } from "../services/llm";
+import { SettingsSchema } from "@shared/schemas";
 import type { AIProviderConfig } from "@shared/types";
 
 const settings = new Hono();
@@ -26,13 +27,31 @@ settings.get("/", (c) => {
 
 // Update settings (deep merge)
 settings.put("/", async (c) => {
-  const body = await c.req.json();
+  const rawBody = await c.req.json();
+  
+  // Validate with partial schema for updates
+  const parseResult = SettingsSchema.partial().safeParse(rawBody);
+  if (!parseResult.success) {
+    return c.json({ 
+      ok: false, 
+      error: "Invalid settings update", 
+      details: parseResult.error.format() 
+    }, 400);
+  }
+  
+  const body = parseResult.data;
 
   // Prevent masked API keys from overwriting real ones
   if (body.ai?.providers) {
     const current = getSettings();
-    for (const [name, provider] of Object.entries(body.ai.providers) as [string, any][]) {
-      if (provider.apiKey && (provider.apiKey.includes("...") || provider.apiKey === "****")) {
+    for (const [name, provider] of Object.entries(body.ai.providers)) {
+      if (
+        typeof provider === "object" &&
+        provider !== null &&
+        "apiKey" in provider &&
+        typeof provider.apiKey === "string" &&
+        (provider.apiKey.includes("...") || provider.apiKey === "****")
+      ) {
         // Keep the existing key if the incoming one is masked
         provider.apiKey = current.ai.providers[name]?.apiKey ?? "";
       }

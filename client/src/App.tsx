@@ -55,7 +55,7 @@ function App() {
   // Loading state while checking onboarding
   if (onboarded === null) {
     return (
-      <div className="h-screen w-screen bg-[#0A0A0B] flex items-center justify-center">
+      <div className="h-screen w-screen bg-background-dark flex items-center justify-center">
         <div className="text-sm text-slate-500">Loading…</div>
       </div>
     );

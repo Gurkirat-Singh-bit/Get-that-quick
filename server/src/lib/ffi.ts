@@ -83,13 +83,32 @@ function openVosk() {
   return symbols;
 }
 
-/** Get Vosk FFI symbols (lazy-loaded, cached). */
+/**
+ * Get Vosk FFI symbols (lazy-loaded, cached).
+ * Searches for libvosk.so in standard locations and loads it on first call.
+ * Subsequent calls return the cached symbols.
+ *
+ * @returns Object containing all Vosk C API function pointers.
+ * @throws {Error} If libvosk.so cannot be found in any search path.
+ */
 export function getVosk(): VoskSymbols {
   if (!_symbols) _symbols = openVosk();
   return _symbols;
 }
 
-/** Create a null-terminated C string buffer from a JS string. */
+/**
+ * Create a null-terminated C string buffer from a JS string.
+ * Required for passing strings to C functions via FFI.
+ *
+ * @param s - JavaScript string to convert.
+ * @returns Buffer containing the string with null terminator.
+ *
+ * @example
+ * ```ts
+ * const pathBuf = cstr("/path/to/model");
+ * vosk_model_new(pathBuf);
+ * ```
+ */
 export function cstr(s: string): Buffer {
   return Buffer.from(s + "\0");
 }

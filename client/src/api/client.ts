@@ -313,15 +313,46 @@ export function deleteModel(id: string): Promise<null> {
 }
 
 /**
- * Download a Vosk model. Streams progress via SSE.
+ * Download progress information with speed and time estimation.
+ */
+export interface ModelDownloadProgress {
+  /** Current status: downloading, extracting, or complete. */
+  status: "downloading" | "extracting" | "complete";
+  /** Bytes downloaded so far. */
+  downloaded: number;
+  /** Total file size in bytes. */
+  total: number;
+  /** Download percentage (0-100). */
+  percent: number;
+  /** Download speed in bytes per second (only during downloading). */
+  speed?: number;
+  /** Estimated time remaining in seconds (only during downloading). */
+  eta?: number;
+}
+
+/**
+ * Download a Vosk model with progress streaming via SSE.
+ * Progress includes download speed and estimated time remaining.
  *
  * @param id         - Model identifier from the manifest.
- * @param onProgress - Called with download progress updates.
+ * @param onProgress - Called with download progress updates including speed and ETA.
  * @returns Promise that resolves when download is complete.
+ * 
+ * @example
+ * ```ts
+ * await downloadModel("vosk-model-small-en-us-0.15", (progress) => {
+ *   if (progress.status === "downloading") {
+ *     const speedMB = (progress.speed! / 1024 / 1024).toFixed(1);
+ *     console.log(\`\${progress.percent}% at \${speedMB} MB/s (ETA: \${progress.eta}s)\`);
+ *   } else if (progress.status === "extracting") {
+ *     console.log("Extracting...");
+ *   }
+ * });
+ * ```
  */
 export async function downloadModel(
   id: string,
-  onProgress?: (info: { status: string; downloaded: number; total: number; percent: number }) => void
+  onProgress?: (info: ModelDownloadProgress) => void
 ): Promise<void> {
   const res = await fetch(`${BASE}/models/${id}/download`, {
     method: "POST",
@@ -354,15 +385,42 @@ export async function downloadModel(
       const payload = line.slice(6).trim();
 
       try {
-        const parsed = JSON.parse(payload);
+        const parsed = JSON.parse(payload) as ModelDownloadProgress;
         if (parsed.status === "complete") return;
-        if (parsed.error) throw new ApiClientError(parsed.error, 500);
+        if ("error" in parsed) throw new ApiClientError((parsed as any).error, 500);
         if (onProgress) onProgress(parsed);
       } catch (e) {
         if (e instanceof ApiClientError) throw e;
         // skip malformed chunks
       }
     }
+  }
+}
+
+/**
+ * Cancel an active model download.
+ *
+ * @param id - Model identifier to cancel.
+ * @returns True if download was cancelled, false if no active download.
+ * 
+ * @example
+ * ```ts
+ * if (await cancelDownload("vosk-model-small-en-us-0.15")) {
+ *   console.log("Download cancelled");
+ * }
+ * ```
+ */
+export async function cancelDownload(id: string): Promise<boolean> {
+  try {
+    await request<{ cancelled: boolean }>(`/models/${id}/download`, { 
+      method: "DELETE" 
+    });
+    return true;
+  } catch (err) {
+    if (err instanceof ApiClientError && err.status === 404) {
+      return false;
+    }
+    throw err;
   }
 }
 

@@ -8,7 +8,7 @@
  * @module components/chat/message
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, isValidElement, type ComponentPropsWithoutRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -248,26 +248,35 @@ export function Message({ message, onSaveAsTemplate, onRegenerate, onExpand, onR
 
   const markdownComponents = useMemo(
     () => ({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      pre: ({ children, ...props }: any) => (
-        <div className="relative group my-3">
-          <pre
-            className="bg-[#1E1E2E] text-zinc-200 rounded-lg p-4 overflow-x-auto text-[13px] leading-relaxed border border-[#2A2A3C]"
-            {...props}
-          >
-            {children}
-          </pre>
-          <CopyButton
-            text={
-              typeof children?.props?.children === "string"
-                ? children.props.children
-                : ""
-            }
-          />
-        </div>
-      ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      code: ({ className, children, ...props }: any) => {
+      pre: ({ children, ...props }: ComponentPropsWithoutRef<'pre'>) => {
+        // Extract text content from code block for copy button
+        // React markdown wraps code in a <code> element, so we check for that
+        let codeText = "";
+        try {
+          if (
+            isValidElement(children) &&
+            children.props &&
+            typeof (children.props as any).children === "string"
+          ) {
+            codeText = (children.props as any).children;
+          }
+        } catch {
+          // Ignore extraction errors
+        }
+        
+        return (
+          <div className="relative group my-3">
+            <pre
+              className="bg-[#1E1E2E] text-zinc-200 rounded-lg p-4 overflow-x-auto text-[13px] leading-relaxed border border-[#2A2A3C]"
+              {...props}
+            >
+              {children}
+            </pre>
+            <CopyButton text={codeText} />
+          </div>
+        );
+      },
+      code: ({ className, children, ...props }: ComponentPropsWithoutRef<'code'>) => {
         const isInline = !className;
         if (isInline) {
           return (
@@ -285,8 +294,7 @@ export function Message({ message, onSaveAsTemplate, onRegenerate, onExpand, onR
           </code>
         );
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      table: ({ children, ...props }: any) => (
+      table: ({ children, ...props }: ComponentPropsWithoutRef<'table'>) => (
         <div className="my-3 overflow-x-auto">
           <table
             className="w-full text-sm border-collapse border border-[#E2E4E9]"
@@ -296,8 +304,7 @@ export function Message({ message, onSaveAsTemplate, onRegenerate, onExpand, onR
           </table>
         </div>
       ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      th: ({ children, ...props }: any) => (
+      th: ({ children, ...props }: ComponentPropsWithoutRef<'th'>) => (
         <th
           className="border border-[#E2E4E9] bg-zinc-100 px-3 py-2 text-left text-xs font-semibold text-zinc-700"
           {...props}
@@ -305,8 +312,7 @@ export function Message({ message, onSaveAsTemplate, onRegenerate, onExpand, onR
           {children}
         </th>
       ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      td: ({ children, ...props }: any) => (
+      td: ({ children, ...props }: ComponentPropsWithoutRef<'td'>) => (
         <td
           className="border border-[#E2E4E9] px-3 py-2 text-sm text-zinc-600"
           {...props}
@@ -314,8 +320,7 @@ export function Message({ message, onSaveAsTemplate, onRegenerate, onExpand, onR
           {children}
         </td>
       ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      a: ({ children, ...props }: any) => (
+      a: ({ children, ...props }: ComponentPropsWithoutRef<'a'>) => (
         <a
           className="text-primary hover:underline"
           target="_blank"
@@ -325,8 +330,7 @@ export function Message({ message, onSaveAsTemplate, onRegenerate, onExpand, onR
           {children}
         </a>
       ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      blockquote: ({ children, ...props }: any) => (
+      blockquote: ({ children, ...props }: ComponentPropsWithoutRef<'blockquote'>) => (
         <blockquote
           className="border-l-3 border-zinc-300 pl-4 my-3 text-zinc-500 italic"
           {...props}
@@ -334,36 +338,29 @@ export function Message({ message, onSaveAsTemplate, onRegenerate, onExpand, onR
           {children}
         </blockquote>
       ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ul: ({ children, ...props }: any) => (
+      ul: ({ children, ...props }: ComponentPropsWithoutRef<'ul'>) => (
         <ul className="list-disc pl-6 my-2 space-y-1" {...props}>
           {children}
         </ul>
       ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ol: ({ children, ...props }: any) => (
+      ol: ({ children, ...props }: ComponentPropsWithoutRef<'ol'>) => (
         <ol className="list-decimal pl-6 my-2 space-y-1" {...props}>
           {children}
         </ol>
       ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      h1: ({ children, ...props }: any) => (
+      h1: ({ children, ...props }: ComponentPropsWithoutRef<'h1'>) => (
         <h1 className="text-xl font-bold mt-5 mb-2 text-zinc-800" {...props}>{children}</h1>
       ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      h2: ({ children, ...props }: any) => (
+      h2: ({ children, ...props }: ComponentPropsWithoutRef<'h2'>) => (
         <h2 className="text-lg font-bold mt-4 mb-2 text-zinc-800" {...props}>{children}</h2>
       ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      h3: ({ children, ...props }: any) => (
+      h3: ({ children, ...props }: ComponentPropsWithoutRef<'h3'>) => (
         <h3 className="text-base font-semibold mt-3 mb-1.5 text-zinc-700" {...props}>{children}</h3>
       ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      p: ({ children, ...props }: any) => (
+      p: ({ children, ...props }: ComponentPropsWithoutRef<'p'>) => (
         <p className="my-2 leading-relaxed" {...props}>{children}</p>
       ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      hr: (props: any) => (
+      hr: (props: ComponentPropsWithoutRef<'hr'>) => (
         <hr className="my-4 border-[#E2E4E9]" {...props} />
       ),
     }),

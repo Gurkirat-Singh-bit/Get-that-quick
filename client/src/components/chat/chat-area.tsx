@@ -80,10 +80,16 @@ export function ChatArea({
   const bottomRef = useRef<HTMLDivElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
-  /** Auto-scroll when messages change. */
+  /** 
+   * Auto-scroll when messages change.
+   * Use instant scroll during generation to prevent jitter from smooth animation.
+   * Use smooth scroll when not generating for better UX.
+   */
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [session?.messages]);
+    bottomRef.current?.scrollIntoView({ 
+      behavior: generating ? "auto" : "smooth" 
+    });
+  }, [session?.messages, generating]);
 
   /** Handle template drop. */
   const handleDragOver = useCallback((e: React.DragEvent) => {

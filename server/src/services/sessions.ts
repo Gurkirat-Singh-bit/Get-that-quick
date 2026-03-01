@@ -15,7 +15,11 @@ import type { Session, SessionMeta } from "@shared/types";
 
 // ── Read ──────────────────────────────────────────────────────────────────
 
-/** List all sessions (metadata only, newest first). */
+/**
+ * List all sessions (metadata only, newest first).
+ *
+ * @returns Array of session metadata sorted by updatedAt descending.
+ */
 export function listSessions(): SessionMeta[] {
   const dir = getPromptsDir();
   if (!existsSync(dir)) return [];
@@ -47,7 +51,12 @@ export function listSessions(): SessionMeta[] {
   );
 }
 
-/** Get a single session with all messages. */
+/**
+ * Get a single session with all messages.
+ *
+ * @param id - Session identifier to retrieve.
+ * @returns The complete session object, or null if not found.
+ */
 export function getSession(id: string): Session | null {
   const path = sessionPath(id);
   if (!existsSync(path)) return null;
@@ -60,7 +69,12 @@ export function getSession(id: string): Session | null {
 
 // ── Write ─────────────────────────────────────────────────────────────────
 
-/** Create a new session on disk. */
+/**
+ * Create a new session on disk.
+ *
+ * @param session - Complete session object to create.
+ * @returns The created session (same as input).
+ */
 export function createSession(session: Session): Session {
   writeFileSync(
     sessionPath(session.id),
@@ -70,7 +84,13 @@ export function createSession(session: Session): Session {
   return session;
 }
 
-/** Merge partial updates into an existing session, bump updatedAt. */
+/**
+ * Merge partial updates into an existing session, bump updatedAt.
+ *
+ * @param id - Session ID to update.
+ * @param updates - Partial session fields to merge.
+ * @returns The updated session, or null if session not found.
+ */
 export function updateSession(
   id: string,
   updates: Partial<Session>
@@ -89,7 +109,12 @@ export function updateSession(
   return updated;
 }
 
-/** Delete a session file. Returns true if it existed. */
+/**
+ * Delete a session file. Returns true if it existed.
+ *
+ * @param id - Session ID to delete.
+ * @returns True if the session was deleted, false if it didn't exist.
+ */
 export function deleteSession(id: string): boolean {
   const path = sessionPath(id);
   if (!existsSync(path)) return false;

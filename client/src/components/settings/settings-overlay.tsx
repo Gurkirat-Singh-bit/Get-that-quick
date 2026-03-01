@@ -703,7 +703,12 @@ function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType
   const [models, setModels] = useState<VoskModelInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<Set<string>>(new Set());
-  const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({});
+  const [downloadProgress, setDownloadProgress] = useState<Record<string, { 
+    percent: number; 
+    status: string;
+    speed?: number;
+    eta?: number;
+  }>>({});
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -718,17 +723,39 @@ function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType
 
   const handleDownload = async (id: string) => {
     setDownloading((prev) => new Set(prev).add(id));
-    setDownloadProgress((prev) => ({ ...prev, [id]: 0 }));
+    setDownloadProgress((prev) => ({ ...prev, [id]: { percent: 0, status: "downloading" } }));
     setError(null);
     try {
-      await api.downloadModel(id, (info) =>
-        setDownloadProgress((prev) => ({ ...prev, [id]: info.percent }))
-      );
+      await api.downloadModel(id, (info) => {
+        setDownloadProgress((prev) => ({ 
+          ...prev, 
+          [id]: { 
+            percent: info.percent,
+            status: info.status,
+            speed: info.speed,
+            eta: info.eta,
+          } 
+        }));
+      });
       refreshModels();
     } catch (err: any) {
       setError(err.message || "Download failed");
     } finally {
       setDownloading((prev) => { const next = new Set(prev); next.delete(id); return next; });
+      setDownloadProgress((prev) => { const next = { ...prev }; delete next[id]; return next; });
+    }
+  };
+
+  const handleCancel = async (id: string) => {
+    try {
+      const cancelled = await api.cancelDownload(id);
+      if (cancelled) {
+        setDownloading((prev) => { const next = new Set(prev); next.delete(id); return next; });
+        setDownloadProgress((prev) => { const next = { ...prev }; delete next[id]; return next; });
+        refreshModels();
+      }
+    } catch (err: any) {
+      setError(err.message || "Cancel failed");
     }
   };
 
@@ -832,14 +859,48 @@ function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType
                     </button>
                   </>
                 ) : downloading.has(model.id) ? (
-                  <div className="flex items-center gap-2 w-full">
-                    <div className="flex-1 h-1.5 bg-[#1E1E22] rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary rounded-full transition-all duration-300"
-                        style={{ width: `${downloadProgress[model.id] ?? 0}%` }}
-                      />
+                  <div className="flex flex-col gap-1.5 w-full">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 bg-[#1E1E22] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full transition-all duration-300"
+                          style={{ width: `${downloadProgress[model.id]?.percent ?? 0}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-primary shrink-0">
+                        {downloadProgress[model.id]?.percent ?? 0}%
+                      </span>
+                      <button
+                        onClick={() => handleCancel(model.id)}
+                        className="text-[10px] text-zinc-600 hover:text-red-400 transition-colors"
+                        title="Cancel download"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
                     </div>
-                    <span className="text-[10px] text-primary shrink-0">{downloadProgress[model.id] ?? 0}%</span>
+                    <div className="flex items-center gap-2 text-[9px] text-zinc-500">
+                      {downloadProgress[model.id]?.status === "extracting" ? (
+                        <span className="flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Extracting...
+                        </span>
+                      ) : downloadProgress[model.id]?.speed ? (
+                        <>
+                          <span>
+                            {(downloadProgress[model.id].speed! / 1024 / 1024).toFixed(1)} MB/s
+                          </span>
+                          {downloadProgress[model.id].eta !== undefined && downloadProgress[model.id].eta! > 0 && (
+                            <span>
+                              • ETA: {downloadProgress[model.id].eta! < 60 
+                                ? `${downloadProgress[model.id].eta}s` 
+                                : `${Math.floor(downloadProgress[model.id].eta! / 60)}m ${downloadProgress[model.id].eta! % 60}s`}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span>Starting download...</span>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <button

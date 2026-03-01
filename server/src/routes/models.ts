@@ -7,13 +7,20 @@ import { getSettings, updateSettings } from "../services/config";
 
 const models = new Hono();
 
-// List all models (manifest + download/active status)
+/**
+ * GET /api/models
+ * List all models with download and active status.
+ */
 models.get("/", (c) => {
   const { stt } = getSettings();
   return c.json({ ok: true, data: svc.listModels(stt.activeModel) });
 });
 
-// Download a model (streams progress via SSE)
+/**
+ * POST /api/models/:id/download
+ * Download a model with progress streaming via SSE.
+ * Progress includes download speed and estimated time remaining.
+ */
 models.post("/:id/download", async (c) => {
   const id = c.req.param("id");
   const entry = svc.getManifestEntry(id);
@@ -24,38 +31,52 @@ models.post("/:id/download", async (c) => {
   if (svc.isModelDownloaded(id)) {
     return c.json({ ok: false, error: "Model already downloaded" }, 409);
   }
+  if (svc.isDownloading(id)) {
+    return c.json({ ok: false, error: "Model is already downloading" }, 409);
+  }
 
   return streamSSE(c, async (stream) => {
     try {
-      await svc.downloadModel(entry, (downloaded, total) => {
+      await svc.downloadModel(entry, (progress) => {
         stream.writeSSE({
-          data: JSON.stringify({
-            status: "downloading",
-            downloaded,
-            total,
-            percent: total > 0 ? Math.round((downloaded / total) * 100) : 0,
-          }),
+          data: JSON.stringify(progress),
         });
       });
+      
       // Auto-activate if no model is currently active
       const settings = getSettings();
       if (!settings.stt.activeModel) {
         updateSettings({ stt: { ...settings.stt, activeModel: id } });
       }
-
-      await stream.writeSSE({
-        data: JSON.stringify({ status: "complete" }),
-      });
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
       await stream.writeSSE({
         event: "error",
-        data: JSON.stringify({ error: err.message ?? String(err) }),
+        data: JSON.stringify({ error: message }),
       });
     }
   });
 });
 
-// Delete a model
+/**
+ * DELETE /api/models/:id/download
+ * Cancel an active download.
+ */
+models.delete("/:id/download", (c) => {
+  const id = c.req.param("id");
+  const cancelled = svc.cancelDownload(id);
+  
+  if (!cancelled) {
+    return c.json({ ok: false, error: "No active download found" }, 404);
+  }
+  
+  return c.json({ ok: true, data: { cancelled: true } });
+});
+
+/**
+ * DELETE /api/models/:id
+ * Delete a downloaded model.
+ */
 models.delete("/:id", (c) => {
   const id = c.req.param("id");
   if (!svc.deleteModel(id)) {

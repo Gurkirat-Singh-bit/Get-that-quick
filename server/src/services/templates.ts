@@ -28,7 +28,11 @@ import type { Template, TemplateMeta } from "@shared/types";
 
 // ── Read ──────────────────────────────────────────────────────────────────
 
-/** List all templates (local + community). Returns metadata only. */
+/**
+ * List all templates (local + community). Returns metadata only.
+ *
+ * @returns Array of template metadata sorted alphabetically by title.
+ */
 export function listTemplates(): TemplateMeta[] {
   const local = readDirRecursive(getLocalTemplatesDir(), "local");
   const community = readDirRecursive(getCommunityTemplatesDir(), "community");
@@ -37,7 +41,12 @@ export function listTemplates(): TemplateMeta[] {
   );
 }
 
-/** Get a single template by ID. Searches local first, then community. */
+/**
+ * Get a single template by ID. Searches local first, then community.
+ *
+ * @param id - Template identifier to retrieve.
+ * @returns The complete template with content, or null if not found.
+ */
 export function getTemplate(id: string): Template | null {
   return (
     findRecursive(getLocalTemplatesDir(), id, "local") ??
@@ -47,7 +56,12 @@ export function getTemplate(id: string): Template | null {
 
 // ── Write (local only) ───────────────────────────────────────────────────
 
-/** Create a new local template. Uses its category to determine subdirectory. */
+/**
+ * Create a new local template. Uses its category to determine subdirectory.
+ *
+ * @param tmpl - Complete template object to create.
+ * @returns The created template (same as input).
+ */
 export function createTemplate(tmpl: Template): Template {
   const categoryDir = tmpl.category
     ? join(getLocalTemplatesDir(), ...tmpl.category.split("/").filter(Boolean))
@@ -61,7 +75,13 @@ export function createTemplate(tmpl: Template): Template {
   return tmpl;
 }
 
-/** Update an existing local template (community templates are read-only). */
+/**
+ * Update an existing local template (community templates are read-only).
+ *
+ * @param id - Template ID to update.
+ * @param updates - Partial template fields to merge.
+ * @returns The updated template, or null if not found or is community template.
+ */
 export function updateTemplate(
   id: string,
   updates: Partial<Template>
@@ -104,7 +124,12 @@ export function updateTemplate(
   return merged;
 }
 
-/** Delete a local template. Returns true if it existed. */
+/**
+ * Delete a local template. Returns true if it existed.
+ *
+ * @param id - Template ID to delete.
+ * @returns True if the template was deleted, false if not found.
+ */
 export function deleteTemplate(id: string): boolean {
   const found = findRecursiveWithPath(getLocalTemplatesDir(), id, "local");
   if (!found) return false;
@@ -112,7 +137,11 @@ export function deleteTemplate(id: string): boolean {
   return true;
 }
 
-/** List all categories found across local and community templates. */
+/**
+ * List all categories found across local and community templates.
+ *
+ * @returns Sorted array of unique category names.
+ */
 export function listCategories(): string[] {
   const all = listTemplates();
   const cats = new Set<string>();

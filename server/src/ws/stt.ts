@@ -10,19 +10,25 @@
 
 import type { ServerWebSocket } from "bun";
 import * as vosk from "../services/vosk";
+import type { VoskRecognizer } from "../services/vosk";
 import { isModelDownloaded, listModels } from "../services/models";
 import { getSettings, updateSettings } from "../services/config";
 import type { TranscriptEvent, STTError } from "@shared/types";
 
 /** Per-connection state attached to the WebSocket. */
 export interface STTSessionData {
-  recognizer: any | null;
+  recognizer: VoskRecognizer | null;
   lastActivity: number;
 }
 
 // ── Handlers ──────────────────────────────────────────────────────────────
 
-/** Called when a WebSocket connection is opened at /ws/stt. */
+/**
+ * Called when a WebSocket connection is opened at /ws/stt.
+ * Loads the Vosk model and creates a recognizer for this session.
+ *
+ * @param ws - The WebSocket connection object.
+ */
 export function handleSTTOpen(ws: ServerWebSocket<STTSessionData>): void {
   const settings = getSettings();
   let activeModel = settings.stt.activeModel;
@@ -49,13 +55,20 @@ export function handleSTTOpen(ws: ServerWebSocket<STTSessionData>): void {
     vosk.loadModel();
     const recognizer = vosk.createRecognizer();
     ws.data = { recognizer, lastActivity: Date.now() };
-  } catch (err: any) {
-    sendError(ws, err.message ?? "Failed to initialize STT");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to initialize STT";
+    sendError(ws, message);
     ws.close(1011, "STT init failed");
   }
 }
 
-/** Called for each incoming WebSocket message (binary audio data). */
+/**
+ * Called for each incoming WebSocket message (binary audio data).
+ * Feeds audio to the recognizer and sends back partial/final transcripts.
+ *
+ * @param ws - The WebSocket connection object.
+ * @param message - Binary PCM audio data or text (text is rejected).
+ */
 export function handleSTTMessage(
   ws: ServerWebSocket<STTSessionData>,
   message: Buffer | string
@@ -90,7 +103,12 @@ export function handleSTTMessage(
   }
 }
 
-/** Called when the WebSocket connection closes. */
+/**
+ * Called when the WebSocket connection closes.
+ * Flushes remaining audio and frees the recognizer.
+ *
+ * @param ws - The WebSocket connection object.
+ */
 export function handleSTTClose(ws: ServerWebSocket<STTSessionData>): void {
   if (!ws.data?.recognizer) return;
 
@@ -110,11 +128,11 @@ export function handleSTTClose(ws: ServerWebSocket<STTSessionData>): void {
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-function send(ws: ServerWebSocket<any>, event: TranscriptEvent): void {
+function send(ws: ServerWebSocket<STTSessionData>, event: TranscriptEvent): void {
   ws.send(JSON.stringify(event));
 }
 
-function sendError(ws: ServerWebSocket<any>, message: string): void {
+function sendError(ws: ServerWebSocket<STTSessionData>, message: string): void {
   const event: STTError = { type: "error", message };
   ws.send(JSON.stringify(event));
 }

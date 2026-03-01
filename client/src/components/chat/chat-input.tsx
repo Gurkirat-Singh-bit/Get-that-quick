@@ -355,7 +355,7 @@ export function ChatInput({
                 className="flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-lg bg-white border border-[#E2E4E9] text-xs text-zinc-600 group"
               >
                 <FileText className="w-3 h-3 text-zinc-400 shrink-0" />
-                <span className="truncate max-w-[120px]">{doc.name}</span>
+                <span className="truncate max-w-30">{doc.name}</span>
                 <span className="text-[10px] text-zinc-400">{formatSize(doc.size)}</span>
                 <button
                   onClick={() => removeDocument(doc.id)}

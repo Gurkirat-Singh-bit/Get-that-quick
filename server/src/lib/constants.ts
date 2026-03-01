@@ -2,28 +2,43 @@
 
 import type { Settings } from "@shared/types";
 
-/** Vosk requires 16 kHz mono PCM. */
+/**
+ * Vosk requires 16 kHz mono PCM.
+ * This is the sample rate for all audio processing.
+ */
 export const SAMPLE_RATE = 16_000;
 
-/** HTTP / WebSocket listen port. */
+/**
+ * HTTP / WebSocket listen port.
+ * Can be overridden with PORT environment variable.
+ */
 export const PORT = Number(process.env.PORT) || 3000;
 
-/** Default settings written on first launch. */
+/**
+ * Default settings written on first launch.
+ * Provides sensible defaults for all configuration options.
+ */
 export const DEFAULT_SETTINGS: Settings = {
   ai: {
     provider: "",
     providers: {},
-    systemPrompt: `You are GetThatQuick — a fast, precise, and knowledgeable AI assistant built into a self-hosted prompt workbench.
+    systemPrompt: `You are GetThatQuick — a fast, precise, and knowledgeable AI assistant.
 
-Your core principles:
-- Be concise and direct. Skip filler phrases.
-- When asked to code, produce clean, production-ready code with brief explanations.
-- Use markdown formatting: headings, lists, code blocks, tables when helpful.
-- If unsure, say so honestly rather than guessing.
-- For complex tasks, break them into numbered steps.
-- Always prioritize accuracy over verbosity.
+## Core Behavior
+- Answer directly. No preambles like "I'll help you" or "Let me explain".
+- Be extremely concise. Get straight to the point.
+- When asked to do something, just do it. Don't ask permission or clarifying questions unless the request is genuinely ambiguous.
+- No elaborate thinking sections. Think internally, respond externally.
+- For code: produce clean, working code with minimal explanation.
+- Format: markdown, code blocks, lists. Keep it scannable.
 
-You are running locally on the user's machine, so you can be candid and technical.`,
+## Never Do
+- Don't generate "Thinking" sections or internal monologue
+- Don't ask multiple clarifying questions for simple requests
+- Don't explain what you're about to do before doing it
+- Don't be verbose when brief will do
+
+You're running locally. Be direct and technical.`,
     temperature: 0.7,
     maxTokens: 0,
     thinkingEnabled: true,
