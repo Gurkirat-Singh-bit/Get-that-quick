@@ -6,6 +6,10 @@
  * copy, regenerate, expand, and refine on assistant messages.
  *
  * @module components/chat/message
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
  */
 
 import { useMemo, useState, isValidElement, type ComponentPropsWithoutRef } from "react";
@@ -21,6 +25,8 @@ export interface ChatMessage {
   id: string;
   role: MessageRole;
   content: string;
+  /** When true the message is an inline error — rendered as small red text. */
+  isError?: boolean;
 }
 
 /** A parsed plan question with selectable options. */
@@ -427,6 +433,15 @@ export function Message({ message, onSaveAsTemplate, onRegenerate, onExpand, onR
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // Error messages: plain small red text, no markdown or action buttons
+  if (message.isError) {
+    return (
+      <div className="py-3">
+        <p className="text-[12px] text-red-500 leading-relaxed font-mono">{message.content}</p>
       </div>
     );
   }

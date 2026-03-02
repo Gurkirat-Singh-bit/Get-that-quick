@@ -1,10 +1,18 @@
-// ── LLM service — OpenAI-compatible client for AI providers ──────────────
-//
-// Uses the `openai` npm package which works with OpenRouter, OpenAI,
-// Ollama, LM Studio, vLLM, and any other OpenAI-compatible endpoint.
-//
-// API keys are stored server-side in settings.json.
-// The browser never talks to LLM providers directly.
+/**
+ * @fileoverview LLM (AI) generation service.
+ *
+ * Thin wrapper around the `openai` package that works with any
+ * OpenAI-compatible endpoint: OpenAI, OpenRouter, Ollama, LM Studio, etc.
+ *
+ * API keys live server-side in `settings.json`.
+ * The browser never contacts the AI provider directly.
+ *
+ * @module services/llm
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
+ */
 
 import OpenAI from "openai";
 import { getSettings } from "./config";
@@ -49,8 +57,13 @@ interface ExtendedCompletionParams {
 }
 
 // ── Client builder ────────────────────────────────────────────────────────
-
-function buildClient(providerOverride?: string): {
+/**
+ * Build an OpenAI client from the current settings or a named provider override.
+ *
+ * @param providerOverride - Optional provider name. Defaults to the active provider.
+ * @returns Object with the OpenAI client and the model name to use.
+ * @throws {Error} If the provider is not configured or no model is selected.
+ */function buildClient(providerOverride?: string): {
   client: OpenAI;
   model: string;
 } {
@@ -70,9 +83,13 @@ function buildClient(providerOverride?: string): {
     throw new Error(`No model selected for provider "${name}".`);
   }
 
+  const isOpenRouter = provider.baseUrl.includes("openrouter.ai");
   const client = new OpenAI({
     apiKey: provider.apiKey || "none",
     baseURL: provider.baseUrl,
+    defaultHeaders: isOpenRouter
+      ? { "HTTP-Referer": "https://getthatquick.app", "X-Title": "GetThatQuick" }
+      : undefined,
   });
 
   return { client, model: provider.model };
@@ -198,9 +215,13 @@ export async function testProvider(
   config: AIProviderConfig
 ): Promise<{ ok: boolean; error?: string }> {
   try {
+    const isOpenRouter = config.baseUrl.includes("openrouter.ai");
     const client = new OpenAI({
       apiKey: config.apiKey || "none",
       baseURL: config.baseUrl,
+      defaultHeaders: isOpenRouter
+        ? { "HTTP-Referer": "https://getthatquick.app", "X-Title": "GetThatQuick" }
+        : undefined,
     });
 
     const res = await client.chat.completions.create({
@@ -236,9 +257,13 @@ export async function listProviderModels(
     throw new Error(`Provider "${name}" is not configured.`);
   }
 
+  const isOpenRouter = provider.baseUrl.includes("openrouter.ai");
   const client = new OpenAI({
     apiKey: provider.apiKey || "none",
     baseURL: provider.baseUrl,
+    defaultHeaders: isOpenRouter
+      ? { "HTTP-Referer": "https://getthatquick.app", "X-Title": "GetThatQuick" }
+      : undefined,
   });
 
   try {

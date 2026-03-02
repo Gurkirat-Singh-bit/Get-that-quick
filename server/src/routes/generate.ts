@@ -1,8 +1,19 @@
-// ── Generate route — /api/generate ───────────────────────────────────────
-//
-// Stateless LLM proxy. The frontend sends the system prompt (from a
-// template) and the conversation messages. The server forwards to the
-// configured provider and streams the response back via SSE.
+/**
+ * @fileoverview HTTP routes for LLM text generation.
+ *
+ * A stateless proxy between the client and the AI provider.
+ * The client sends the system prompt and conversation history;
+ * the server forwards it to the configured provider and streams
+ * the response back using Server-Sent Events (SSE).
+ *
+ * Base path: `/api/generate`
+ *
+ * @module routes/generate
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
+ */
 
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
@@ -12,6 +23,13 @@ import type { GenerateRequest } from "@shared/types";
 
 const generateRoute = new Hono();
 
+/**
+ * `POST /api/generate`
+ *
+ * Forward a conversation to the configured AI provider.
+ * Streams the response as SSE when `stream: true` is in the body,
+ * otherwise returns the full text in one JSON response.
+ */
 generateRoute.post("/", async (c) => {
   const rawBody = await c.req.json();
   
@@ -73,7 +91,12 @@ generateRoute.post("/", async (c) => {
   });
 });
 
-// List available models from a configured provider
+/**
+ * `GET /api/generate/models/:provider`
+ *
+ * Fetch the list of models available from a configured provider.
+ * Uses the stored API key for the named provider.
+ */
 generateRoute.get("/models/:provider", async (c) => {
   const provider = c.req.param("provider");
   try {

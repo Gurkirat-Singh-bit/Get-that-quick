@@ -5,6 +5,10 @@
  * Uses modern Lucide icons for a polished look.
  *
  * @module components/layout/icon-rail
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
  */
 
 import {
@@ -49,7 +53,7 @@ interface IconRailProps {
  */
 export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProjects, onSettingsClick, onNewChat, configOpen, onToggleConfig }: IconRailProps) {
   return (
-    <aside className="w-14 flex flex-col items-center py-5 gap-1.5 shrink-0 bg-[#0A0A0B]">
+    <aside className="w-14 flex flex-col items-center py-5 gap-1.5 shrink-0 bg-background-dark">
       {/* Logo */}
       <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center mb-2">
         <Sparkles className="w-4 h-4 text-primary" />
@@ -62,7 +66,7 @@ export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProje
             onClick={onNewChat}
             className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-white hover:bg-white/5 transition-all"
           >
-            <PenLine className="w-[18px] h-[18px]" />
+            <PenLine className="w-4.5 h-4.5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>
@@ -82,7 +86,7 @@ export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProje
                 : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
             )}
           >
-            <MessagesSquare className="w-[18px] h-[18px]" />
+            <MessagesSquare className="w-4.5 h-4.5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>
@@ -102,7 +106,7 @@ export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProje
                 : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
             )}
           >
-            <FolderKanban className="w-[18px] h-[18px]" />
+            <FolderKanban className="w-4.5 h-4.5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>
@@ -125,7 +129,7 @@ export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProje
                 : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
             )}
           >
-            <SlidersHorizontal className="w-[18px] h-[18px]" />
+            <SlidersHorizontal className="w-4.5 h-4.5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>
@@ -140,7 +144,7 @@ export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProje
             onClick={onSettingsClick}
             className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-all"
           >
-            <Settings2 className="w-[18px] h-[18px]" />
+            <Settings2 className="w-4.5 h-4.5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>

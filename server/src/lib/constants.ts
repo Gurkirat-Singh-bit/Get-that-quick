@@ -1,4 +1,15 @@
-// ── Constants & defaults ──────────────────────────────────────────────────
+/**
+ * @fileoverview Server-wide constants and default settings.
+ *
+ * Defines the Vosk sample rate, server port, and the default
+ * `settings.json` values written on a fresh install.
+ *
+ * @module lib/constants
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
+ */
 
 import type { Settings } from "@shared/types";
 

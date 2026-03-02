@@ -5,6 +5,10 @@
  * results into community and local buckets for the sidebar.
  *
  * @module hooks/use-templates
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
  */
 
 import { useState, useEffect, useCallback } from "react";

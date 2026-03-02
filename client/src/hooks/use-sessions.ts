@@ -5,6 +5,10 @@
  * with local state for the active session and optimistic UI updates.
  *
  * @module hooks/use-sessions
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -28,6 +32,8 @@ export interface UseSessionsReturn {
   /** Refine/improve the last assistant response. */
   refineLastResponse: () => Promise<void>;
   generating: boolean;
+  /** Stop an in-progress generation. */
+  stopGeneration: () => void;
   refresh: () => Promise<void>;
   moveSession: (sessionId: string, projectId: string | null) => void;
   /** Inject settings ref so sendMessage can read system prompt / temperature. */
@@ -53,6 +59,8 @@ export function useSessions(): UseSessionsReturn {
   const settingsRef = useRef<Settings | null>(null);
   const documentsRef = useRef<AttachedDocument[]>([]);
   const activeSessionRef = useRef<Session | null>(null);
+  /** AbortController for the current generation request. */
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const setSettings = useCallback((s: Settings | null) => {
     settingsRef.current = s;
@@ -279,27 +287,48 @@ Your question text here?
 
       let fullContent = "";
 
-      for await (const chunk of api.generateStream({
-        systemPrompt,
-        messages: conversationMessages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
-        temperature: settings?.ai?.temperature ?? 0.7,
-        maxTokens: settings?.ai?.maxTokens || undefined,
-        thinkingEnabled: settings?.ai?.thinkingEnabled ?? false,
-      })) {
-        fullContent += chunk;
-        setActiveSession((prev) => {
-          if (!prev) return null;
-          const msgs = [...prev.messages];
-          const lastIdx = msgs.length - 1;
-          msgs[lastIdx] = { ...msgs[lastIdx], content: fullContent };
-          return { ...prev, messages: msgs };
-        });
+      // Create a fresh AbortController for this generation
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      try {
+        for await (const chunk of api.generateStream({
+          systemPrompt,
+          messages: conversationMessages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          temperature: settings?.ai?.temperature ?? 0.7,
+          maxTokens: settings?.ai?.maxTokens || undefined,
+          thinkingEnabled: settings?.ai?.thinkingEnabled ?? false,
+        }, controller.signal)) {
+          fullContent += chunk;
+          setActiveSession((prev) => {
+            if (!prev) return null;
+            const msgs = [...prev.messages];
+            const lastIdx = msgs.length - 1;
+            msgs[lastIdx] = { ...msgs[lastIdx], content: fullContent };
+            return { ...prev, messages: msgs };
+          });
+        }
+      } finally {
+        abortControllerRef.current = null;
       }
 
-      // Persist
+      // If the generation was stopped by the user, persist whatever was
+      // streamed so far but skip the refresh to avoid re-render flicker.
+      if (controller.signal.aborted) {
+        if (fullContent) {
+          const partial = [
+            ...conversationMessages,
+            { ...assistantMsg, content: fullContent },
+          ];
+          await api.updateSession(session.id, { messages: partial } as Partial<Session>);
+        }
+        return fullContent;
+      }
+
+      // Normal completion — persist and refresh session list.
       const finalMessages = [
         ...conversationMessages,
         { ...assistantMsg, content: fullContent },
@@ -350,16 +379,26 @@ Your question text here?
           autoNameSession(session.id, updatedMessages);
         }
       } catch (err) {
+        // Abort is a clean stop — don't show an error to the user
+        if (err instanceof DOMException && err.name === "AbortError") return;
+
         console.error("[useSessions] Generate failed:", err);
+
+        let errorMsg = "Failed to get a response. Check that the server is running and an LLM provider is configured.";
+        if (err instanceof api.ApiClientError) {
+          if (err.isNetworkError) {
+            errorMsg = "Network error: Cannot reach the server. Check your connection.";
+          } else {
+            // Use the real error message from the provider (e.g. OpenRouter response)
+            errorMsg = err.message || errorMsg;
+          }
+        }
+
         setActiveSession((prev) => {
           if (!prev) return null;
           const msgs = [...prev.messages];
           const lastIdx = msgs.length - 1;
-          msgs[lastIdx] = {
-            ...msgs[lastIdx],
-            content:
-              "⚠️ Failed to get a response. Check that the server is running and an LLM provider is configured.",
-          };
+          msgs[lastIdx] = { ...msgs[lastIdx], content: errorMsg, isError: true };
           return { ...prev, messages: msgs };
         });
       } finally {
@@ -368,6 +407,13 @@ Your question text here?
     },
     [generating, getSystemPrompt, streamAssistantResponse, autoNameSession]
   );
+
+  /** Stop the currently running generation. */
+  const stopGeneration = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setGenerating(false);
+  }, []);
 
   /** Regenerate the last assistant response. */
   const regenerateLastResponse = useCallback(async () => {
@@ -385,7 +431,8 @@ Your question text here?
       const systemPrompt = await getSystemPrompt(activeSession);
       await streamAssistantResponse(activeSession, withoutLast, systemPrompt);
     } catch (err) {
-      console.error("[useSessions] Regenerate failed:", err);
+      if (!(err instanceof DOMException && err.name === "AbortError"))
+        console.error("[useSessions] Regenerate failed:", err);
     } finally {
       setGenerating(false);
     }
@@ -415,7 +462,8 @@ Your question text here?
       const systemPrompt = await getSystemPrompt(activeSession);
       await streamAssistantResponse(activeSession, updated, systemPrompt);
     } catch (err) {
-      console.error("[useSessions] Expand failed:", err);
+      if (!(err instanceof DOMException && err.name === "AbortError"))
+        console.error("[useSessions] Expand failed:", err);
     } finally {
       setGenerating(false);
     }
@@ -445,7 +493,8 @@ Your question text here?
       const systemPrompt = await getSystemPrompt(activeSession);
       await streamAssistantResponse(activeSession, updated, systemPrompt);
     } catch (err) {
-      console.error("[useSessions] Refine failed:", err);
+      if (!(err instanceof DOMException && err.name === "AbortError"))
+        console.error("[useSessions] Refine failed:", err);
     } finally {
       setGenerating(false);
     }
@@ -580,6 +629,7 @@ Your question text here?
     renameSession,
     sendMessage,
     generating,
+    stopGeneration,
     refresh,
     moveSession,
     regenerateLastResponse,

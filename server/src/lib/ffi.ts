@@ -1,9 +1,16 @@
-// ── Vosk C API — FFI declarations ─────────────────────────────────────────
-//
-// Loads libvosk.so lazily on first call.  Set VOSK_LIB_PATH to override
-// the search paths if the library lives in a non-standard location.
-//
-// Reference: test/javascript/live_transcribe.ts (PoC)
+/**
+ * @fileoverview Vosk C library FFI (foreign function interface) bindings.
+ *
+ * Loads `libvosk.so` lazily on the first call and exposes its C API
+ * as typed Bun FFI symbols. Set the `VOSK_LIB_PATH` env variable to
+ * point to the library if it is in a non-standard location.
+ *
+ * @module lib/ffi
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
+ */
 
 import { dlopen, FFIType } from "bun:ffi";
 import { existsSync } from "node:fs";
@@ -18,6 +25,12 @@ const LIB_SEARCH_PATHS = [
   "/usr/lib/aarch64-linux-gnu/libvosk.so",
 ].filter(Boolean) as string[];
 
+/**
+ * Search well-known paths for `libvosk.so`.
+ *
+ * @returns The first path that exists on disk.
+ * @throws {Error} If the library is not found in any search path.
+ */
 function findLibrary(): string {
   for (const p of LIB_SEARCH_PATHS) {
     if (existsSync(p)) return p;
@@ -28,11 +41,17 @@ function findLibrary(): string {
   );
 }
 
-// ── Lazy singleton ───────────────────────────────────────────────────────
+// ── Lazy singleton ────────────────────────────────────────────────────────────
 
 type VoskSymbols = ReturnType<typeof openVosk>;
 let _symbols: VoskSymbols | null = null;
 
+/**
+ * Open the Vosk shared library and bind all needed C functions.
+ *
+ * @returns Bound Vosk C API symbols.
+ * @throws {Error} If the library cannot be loaded.
+ */
 function openVosk() {
   const libPath = findLibrary();
   console.log(`[vosk] Loading ${libPath}`);

@@ -5,6 +5,10 @@
  * Drag a chat onto a project header to add it.
  *
  * @module components/sidebar/left-sidebar
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
  */
 
 import { useState, useRef, useEffect, type DragEvent } from "react";
@@ -136,7 +140,7 @@ function SessionRow({
               }}
               onBlur={handleSave}
               disabled={saving}
-              className="w-full bg-[#0A0A0B] border border-primary/40 rounded px-1.5 py-0.5 text-xs text-zinc-200 outline-none focus:border-primary/60"
+              className="w-full bg-background-dark border border-primary/40 rounded px-1.5 py-0.5 text-xs text-zinc-200 outline-none focus:border-primary/60"
               onClick={(e) => e.stopPropagation()}
             />
             <button
@@ -260,7 +264,7 @@ export function LeftSidebar({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search chats..."
-            className="w-full bg-[#0A0A0B] border border-[#1A1A1E] rounded-lg py-2 pl-8 pr-3 text-xs text-zinc-300 placeholder:text-zinc-600 focus:ring-1 focus:ring-primary/30 focus:border-primary/30 transition-all outline-none"
+            className="w-full bg-background-dark border border-[#1A1A1E] rounded-lg py-2 pl-8 pr-3 text-xs text-zinc-300 placeholder:text-zinc-600 focus:ring-1 focus:ring-primary/30 focus:border-primary/30 transition-all outline-none"
           />
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-600 w-3.5 h-3.5" />
         </div>
@@ -332,7 +336,7 @@ export function LeftSidebar({
                               if (trimmed && trimmed !== project.name) onRenameProject(project.id, trimmed);
                               setEditingProjectId(null);
                             }}
-                            className="w-full bg-[#0A0A0B] border border-primary/40 rounded px-1.5 py-0.5 text-[11px] text-zinc-200 outline-none focus:border-primary/60"
+                            className="w-full bg-background-dark border border-primary/40 rounded px-1.5 py-0.5 text-[11px] text-zinc-200 outline-none focus:border-primary/60"
                             autoFocus
                           />
                         </div>
@@ -396,7 +400,7 @@ export function LeftSidebar({
 
           {/* Create Project inline */}
           {creatingProject && (
-            <div className="mx-2 mb-2 bg-[#0A0A0B] rounded-lg p-2 border border-[#1A1A1E]">
+            <div className="mx-2 mb-2 bg-background-dark rounded-lg p-2 border border-[#1A1A1E]">
               <input
                 type="text"
                 value={newProjectName}

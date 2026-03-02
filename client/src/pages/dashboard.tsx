@@ -6,6 +6,10 @@
  * and threads data down to child components.
  *
  * @module pages/dashboard
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
  */
 
 import { useState, useCallback, useEffect, useMemo } from "react";
@@ -210,6 +214,7 @@ export function Dashboard() {
             onRegenerate={sessionHook.regenerateLastResponse}
             onExpand={sessionHook.expandLastResponse}
             onRefine={sessionHook.refineLastResponse}
+            onStop={sessionHook.stopGeneration}
             documents={documents}
             onDocumentsChange={setDocuments}
             onEditMessage={sessionHook.editMessage}

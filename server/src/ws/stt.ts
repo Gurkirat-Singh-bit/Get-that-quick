@@ -1,12 +1,21 @@
-// ── WebSocket STT handler — /ws/stt ──────────────────────────────────────
-//
-// Accepts binary PCM audio chunks (16-bit LE, 16 kHz, mono) and returns
-// JSON transcript events: { type: "partial"|"final", text: string }
-//
-// Lifecycle per connection:
-//   open   → load model (cached), create recognizer
-//   message → feed audio → send partial/final transcript
-//   close  → get final result, free recognizer
+/**
+ * @fileoverview WebSocket handler for real-time speech-to-text.
+ *
+ * Accepts binary PCM audio (16-bit LE, 16 kHz, mono) from the browser
+ * and returns JSON transcript events back over the same socket:
+ * `{ type: "partial" | "final", text: string }`.
+ *
+ * One Vosk recognizer is created per connection and freed on close.
+ * The underlying model stays loaded between connections (cached).
+ *
+ * Endpoint: `ws://host/ws/stt`
+ *
+ * @module ws/stt
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
+ */
 
 import type { ServerWebSocket } from "bun";
 import * as vosk from "../services/vosk";
@@ -128,10 +137,22 @@ export function handleSTTClose(ws: ServerWebSocket<STTSessionData>): void {
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
+/**
+ * Send a typed transcript event to the client as JSON.
+ *
+ * @param ws    - The WebSocket connection.
+ * @param event - Transcript event to send.
+ */
 function send(ws: ServerWebSocket<STTSessionData>, event: TranscriptEvent): void {
   ws.send(JSON.stringify(event));
 }
 
+/**
+ * Send an error message to the client as JSON.
+ *
+ * @param ws      - The WebSocket connection.
+ * @param message - Human-readable error description.
+ */
 function sendError(ws: ServerWebSocket<STTSessionData>, message: string): void {
   const event: STTError = { type: "error", message };
   ws.send(JSON.stringify(event));

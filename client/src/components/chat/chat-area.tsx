@@ -6,6 +6,10 @@
  * When no session is active it shows an empty-state prompt.
  *
  * @module components/chat/chat-area
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
  */
 
 import { useRef, useEffect, useMemo, useState, useCallback } from "react";
@@ -51,6 +55,8 @@ interface ChatAreaProps {
   onApplyTemplate?: (templateId: string) => void;
   /** Name of the active template (resolved from templateId). */
   activeTemplateName?: string | null;
+  /** Stop an in-progress generation. */
+  onStop?: () => void;
 }
 
 /**
@@ -76,19 +82,38 @@ export function ChatArea({
   onDeleteMessage,
   onApplyTemplate,
   activeTemplateName,
+  onStop,
 }: ChatAreaProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  /**
+   * Whether the user has manually scrolled away from the bottom.
+   * When true we pause auto-scroll so the user can read previous messages
+   * without the view snapping back on every new chunk.
+   */
+  const userScrolledUp = useRef(false);
   const [dragOver, setDragOver] = useState(false);
 
-  /** 
-   * Auto-scroll when messages change.
-   * Use instant scroll during generation to prevent jitter from smooth animation.
-   * Use smooth scroll when not generating for better UX.
+  /**
+   * Detect when the user scrolls away from the bottom.
+   * We consider "at the bottom" to be within 80 px of the scroll end.
+   * Re-enables auto-scroll once they return to the bottom.
+   */
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    userScrolledUp.current = distanceFromBottom > 80;
+  }, []);
+
+  /**
+   * Auto-scroll to the bottom on new content — but only when the user
+   * has not manually scrolled up. Always snaps to bottom when generation
+   * finishes or a new session is loaded.
    */
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ 
-      behavior: generating ? "auto" : "smooth" 
-    });
+    if (userScrolledUp.current && generating) return;
+    bottomRef.current?.scrollIntoView({ behavior: generating ? "auto" : "smooth" });
   }, [session?.messages, generating]);
 
   /** Handle template drop. */
@@ -176,7 +201,11 @@ export function ChatArea({
       </div>
 
       {/* Messages — scrollable middle */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto min-h-0"
+      >
         {!session || session.messages.length === 0 ? (
           /* Empty state */
           <div className="flex flex-col items-center justify-center h-full text-center px-6">
@@ -238,7 +267,7 @@ export function ChatArea({
               return (
                 <div key={msg.id}>
                   <Message
-                    message={{ id: msg.id, role: msg.role, content: msg.content }}
+                    message={{ id: msg.id, role: msg.role, content: msg.content, isError: msg.isError }}
                     onSaveAsTemplate={msg.role === "assistant" ? onSaveAsTemplate : undefined}
                     onRegenerate={onRegenerate}
                     onExpand={onExpand}
@@ -275,6 +304,7 @@ export function ChatArea({
       <ChatInput
         onSend={handleSend}
         disabled={generating}
+        onStop={onStop}
         documents={documents}
         onDocumentsChange={onDocumentsChange}
         planMode={settings?.ai?.planMode ?? false}

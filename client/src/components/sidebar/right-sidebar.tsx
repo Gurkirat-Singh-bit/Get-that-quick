@@ -1,3 +1,16 @@
+/**
+ * @fileoverview Right sidebar — template browser and manager.
+ *
+ * Shows community and local templates in a searchable list.
+ * Lets users preview, edit, delete, and drag templates into the chat.
+ *
+ * @module components/sidebar/right-sidebar
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-28
+ * @updated 2026-03-03
+ */
+
 import { useState, useEffect, useMemo } from "react";
 import { Search, FileCode2, Globe, Plus, Trash2, Sparkles, FolderOpen, LayoutTemplate, Pencil, Tag, ChevronDown, ChevronRight, X, Folder, RefreshCw } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -360,7 +373,7 @@ export function RightSidebar({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search templates..."
-            className="w-full bg-[#0A0A0B] border border-[#1A1A1E] rounded-lg py-2 pl-8 pr-3 text-xs text-zinc-300 placeholder:text-zinc-600 focus:ring-1 focus:ring-primary/30 focus:border-primary/30 transition-all outline-none"
+            className="w-full bg-background-dark border border-[#1A1A1E] rounded-lg py-2 pl-8 pr-3 text-xs text-zinc-300 placeholder:text-zinc-600 focus:ring-1 focus:ring-primary/30 focus:border-primary/30 transition-all outline-none"
           />
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-600 w-3.5 h-3.5" />
         </div>
@@ -369,11 +382,11 @@ export function RightSidebar({
       {/* Quick Stats */}
       <div className="px-3 pb-2 shrink-0">
         <div className="flex gap-2">
-          <div className="flex-1 bg-[#0A0A0B] border border-[#1A1A1E] rounded-lg px-3 py-2 text-center">
+          <div className="flex-1 bg-background-dark border border-[#1A1A1E] rounded-lg px-3 py-2 text-center">
             <p className="text-sm font-bold text-zinc-200">{community.length}</p>
             <p className="text-[9px] text-zinc-500 uppercase tracking-wide">Community</p>
           </div>
-          <div className="flex-1 bg-[#0A0A0B] border border-[#1A1A1E] rounded-lg px-3 py-2 text-center">
+          <div className="flex-1 bg-background-dark border border-[#1A1A1E] rounded-lg px-3 py-2 text-center">
             <p className="text-sm font-bold text-zinc-200">{local.length}</p>
             <p className="text-[9px] text-zinc-500 uppercase tracking-wide">Mine</p>
           </div>
@@ -471,7 +484,7 @@ export function RightSidebar({
 
               {/* Create Form — with hierarchical category picker */}
               {isCreating && (
-                <div className="mx-2 mb-3 bg-[#0A0A0B] rounded-lg p-3 border border-[#1A1A1E] space-y-2">
+                <div className="mx-2 mb-3 bg-background-dark rounded-lg p-3 border border-[#1A1A1E] space-y-2">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[11px] font-medium text-zinc-400">New Template</span>
                     <button

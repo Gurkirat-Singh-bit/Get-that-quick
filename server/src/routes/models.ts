@@ -1,4 +1,18 @@
-// ── Models routes — /api/models ──────────────────────────────────────────
+/**
+ * @fileoverview HTTP routes for Vosk speech model management.
+ *
+ * Handles listing available models, downloading them with SSE
+ * progress updates, cancelling downloads, deleting, and switching
+ * the active model used by the STT WebSocket.
+ *
+ * Base path: `/api/models`
+ *
+ * @module routes/models
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
+ */
 
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
@@ -92,7 +106,12 @@ models.delete("/:id", (c) => {
   return c.json({ ok: true, data: null });
 });
 
-// Activate a model
+/**
+ * `PUT /api/models/:id/activate`
+ *
+ * Set a downloaded model as the active STT model.
+ * The id must match a model that is already on disk.
+ */
 models.put("/:id/activate", (c) => {
   const id = c.req.param("id");
   if (!svc.isModelDownloaded(id)) {

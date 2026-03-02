@@ -7,10 +7,14 @@
  * via WebSocket for fully offline voice input.
  *
  * @module components/chat/chat-input
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowUp, Mic, MicOff, Paperclip, ListChecks, FileText, X, Check, Send } from "lucide-react";
+import { ArrowUp, Mic, MicOff, Paperclip, ListChecks, FileText, X, Check, Send, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AttachedDocument } from "@shared/types";
 import type { PlanQuestion } from "@/components/chat/message";
@@ -21,6 +25,8 @@ interface ChatInputProps {
   onSend?: (message: string) => void;
   /** When `true`, input and buttons are disabled (e.g. during generation). */
   disabled?: boolean;
+  /** Called when the user clicks the stop button during generation. */
+  onStop?: () => void;
   /** Attached documents. */
   documents: AttachedDocument[];
   /** Update attached documents. */
@@ -59,6 +65,7 @@ function formatSize(bytes: number): string {
 export function ChatInput({
   onSend,
   disabled = false,
+  onStop,
   documents,
   onDocumentsChange,
   planMode,
@@ -491,12 +498,14 @@ export function ChatInput({
           </div>
         )}
 
-        {/* Main input bar */}
+        {/* Main input bar
+             Note: pointer-events must NOT be blocked on the container when disabled
+             because the stop button lives inside and must remain clickable. Individual
+             controls each carry their own `disabled` attribute. */}
         <div
           className={cn(
             "bg-white rounded-2xl border border-[#E2E4E9] p-1.5 pl-3 flex items-end gap-2 transition-all shadow-sm",
-            isFocused && "ring-2 ring-primary/20 border-primary/30",
-            disabled && "opacity-60 pointer-events-none"
+            isFocused && "ring-2 ring-primary/50 border-primary/60"
           )}
         >
           {/* Attach document button */}
@@ -505,7 +514,7 @@ export function ChatInput({
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
               title="Attach document"
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-all"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Paperclip className="w-4 h-4" />
             </button>
@@ -526,7 +535,16 @@ export function ChatInput({
           <textarea
             ref={textareaRef}
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => {
+              setValue(e.target.value);
+              if (listening) {
+                // User manually edited the text while voice is on.
+                // Move the baseline forward so the next Vosk result
+                // appends here instead of overwriting what they typed.
+                baselineRef.current = e.target.value;
+                accumulatedRef.current = "";
+              }
+            }}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             onKeyDown={handleKeyDown}
@@ -534,7 +552,7 @@ export function ChatInput({
             disabled={disabled}
             rows={1}
             aria-label="Message input"
-            className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-sm py-3 text-zinc-800 placeholder:text-zinc-400 disabled:cursor-not-allowed resize-none leading-6 overflow-y-auto"
+            className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-sm py-3 text-zinc-800 placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-50 resize-none leading-6 overflow-y-auto"
             style={{ maxHeight: 120 }}
           />
 
@@ -546,7 +564,7 @@ export function ChatInput({
               disabled={disabled}
               title={planMode ? "Plan mode: ON — AI will ask clarifying questions first" : "Plan mode: OFF"}
               className={cn(
-                "w-8 h-8 flex items-center justify-center rounded-lg transition-all",
+                "w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed",
                 planMode
                   ? "bg-primary/10 text-primary"
                   : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
@@ -561,7 +579,7 @@ export function ChatInput({
               disabled={disabled}
               aria-label={listening ? "Stop voice input" : "Start voice input"}
               className={cn(
-                "w-8 h-8 flex items-center justify-center rounded-lg transition-all",
+                "w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed",
                 listening
                   ? "bg-red-500 text-white animate-pulse"
                   : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
@@ -570,15 +588,27 @@ export function ChatInput({
               {listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </button>
 
-            {/* Send */}
-            <button
-              onClick={handleSend}
-              disabled={disabled || !value.trim()}
-              aria-label="Send message"
-              className="w-9 h-9 bg-primary flex items-center justify-center rounded-xl text-white hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ArrowUp className="w-4 h-4" />
-            </button>
+            {/* Send / Stop —
+                 When generating: a filled square (stop icon) using the primary accent colour.
+                 When idle: the normal ArrowUp send button. */}
+            {disabled ? (
+              <button
+                onClick={onStop}
+                aria-label="Stop generation"
+                className="w-9 h-9 bg-primary flex items-center justify-center rounded-xl hover:brightness-110 transition-all"
+              >
+                <Square className="w-3.5 h-3.5 fill-primary-foreground text-primary-foreground" />
+              </button>
+            ) : (
+              <button
+                onClick={handleSend}
+                disabled={!value.trim()}
+                aria-label="Send message"
+                className="w-9 h-9 bg-primary flex items-center justify-center rounded-xl text-white hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ArrowUp className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 

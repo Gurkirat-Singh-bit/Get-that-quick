@@ -5,6 +5,10 @@
  * and the prompt body in a textarea with monospace font.
  *
  * @module components/templates/template-editor
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-28
+ * @updated 2026-03-03
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -90,7 +94,7 @@ export function TemplateEditor({ templateId, getTemplate, onSave, onClose }: Tem
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-[720px] max-h-[85vh] bg-[#0E0E10] border border-[#1A1A1E] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <div className="w-180 max-h-[85vh] bg-[#0E0E10] border border-[#1A1A1E] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#1A1A1E] shrink-0">
           <div className="flex items-center gap-2.5">
@@ -133,7 +137,7 @@ export function TemplateEditor({ templateId, getTemplate, onSave, onClose }: Tem
                     type="text"
                     value={title}
                     onChange={(e) => { setTitle(e.target.value); markDirty(); }}
-                    className="w-full bg-[#0A0A0B] border border-[#1A1A1E] rounded-lg px-3 py-2 text-xs text-zinc-300 outline-none focus:border-primary/30"
+                    className="w-full bg-background-dark border border-[#1A1A1E] rounded-lg px-3 py-2 text-xs text-zinc-300 outline-none focus:border-primary/30"
                   />
                 </div>
                 <div className="w-36">
@@ -143,7 +147,7 @@ export function TemplateEditor({ templateId, getTemplate, onSave, onClose }: Tem
                       type="text"
                       value={category}
                       onChange={(e) => { setCategory(e.target.value); markDirty(); }}
-                      className="w-full bg-[#0A0A0B] border border-[#1A1A1E] rounded-lg pl-7 pr-3 py-2 text-xs text-zinc-300 outline-none focus:border-primary/30"
+                      className="w-full bg-background-dark border border-[#1A1A1E] rounded-lg pl-7 pr-3 py-2 text-xs text-zinc-300 outline-none focus:border-primary/30"
                     />
                     <Tag className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-600" />
                   </div>
@@ -155,7 +159,7 @@ export function TemplateEditor({ templateId, getTemplate, onSave, onClose }: Tem
                   type="text"
                   value={description}
                   onChange={(e) => { setDescription(e.target.value); markDirty(); }}
-                  className="w-full bg-[#0A0A0B] border border-[#1A1A1E] rounded-lg px-3 py-2 text-xs text-zinc-300 outline-none focus:border-primary/30"
+                  className="w-full bg-background-dark border border-[#1A1A1E] rounded-lg px-3 py-2 text-xs text-zinc-300 outline-none focus:border-primary/30"
                   placeholder="Short description of what this template does"
                 />
               </div>
@@ -167,7 +171,7 @@ export function TemplateEditor({ templateId, getTemplate, onSave, onClose }: Tem
               <textarea
                 value={content}
                 onChange={(e) => { setContent(e.target.value); markDirty(); }}
-                className="flex-1 w-full bg-[#0A0A0B] border border-[#1A1A1E] rounded-lg p-4 text-xs text-zinc-300 font-mono leading-relaxed outline-none focus:border-primary/30 resize-none"
+                className="flex-1 w-full bg-background-dark border border-[#1A1A1E] rounded-lg p-4 text-xs text-zinc-300 font-mono leading-relaxed outline-none focus:border-primary/30 resize-none"
                 placeholder="Write your system prompt here..."
                 spellCheck={false}
               />

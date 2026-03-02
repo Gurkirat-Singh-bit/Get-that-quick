@@ -1,13 +1,19 @@
-// ── Vosk service — higher-level wrapper around the FFI module ─────────────
-//
-// Manages a single cached model pointer and creates per-session recognizers.
-//
-// Lifecycle:
-//   1. loadModel()        — loads (or reuses) the active model from settings
-//   2. createRecognizer()  — creates a recognizer for one STT session
-//   3. acceptWaveform()    — feed PCM audio chunks
-//   4. getResult() / getPartialResult() — read transcription
-//   5. freeRecognizer()    — free when session ends (model stays cached)
+/**
+ * @fileoverview High-level Vosk speech recognition service.
+ *
+ * Wraps the low-level FFI bindings to provide a simple API:
+ * load the active model once, create a recognizer per WebSocket
+ * session, feed audio chunks, and read transcript results.
+ *
+ * Only one model is kept in memory at a time (cached by ID).
+ * Switching models frees the old one before loading the new one.
+ *
+ * @module services/vosk
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
+ */
 
 import { ptr, type Pointer } from "bun:ffi";
 import { getVosk, cstr } from "../lib/ffi";

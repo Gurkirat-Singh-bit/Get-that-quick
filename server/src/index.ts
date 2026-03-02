@@ -1,11 +1,19 @@
-// ── GetThatQuick — Server entry point ─────────────────────────────────────
-//
-// Single Bun process serving:
-//   • REST API (Hono)          →  /api/*
-//   • WebSocket STT            →  /ws/stt
-//   • Static files (React SPA) →  everything else
-//
-// Data directory: DATA_DIR env or ~/.getthatquick/
+/**
+ * @fileoverview Server entry point for GetThatQuick.
+ *
+ * Starts a single Bun process that handles:
+ * - REST API via Hono (`/api/*`)
+ * - WebSocket speech-to-text at `/ws/stt`
+ * - Serves the built React SPA for all other routes
+ *
+ * Data lives at `~/.getthatquick/` by default (or `DATA_DIR` env var in Docker).
+ *
+ * @module server
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
+ */
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -156,6 +164,10 @@ console.log(`[init] Server running at http://localhost:${server.port}`);
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
+/**
+ * Copy seed templates into the local templates folder on first run.
+ * Skips if any `.md` files already exist in the local folder.
+ */
 function seedTemplates(): void {
   const localDir = getLocalTemplatesDir();
   const existing = existsSync(localDir)

@@ -5,6 +5,10 @@
  * positive/negative prompts, temperature, and max tokens.
  *
  * @module components/settings/config-panel
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
  */
 
 import { useState, useEffect } from "react";
@@ -44,7 +48,7 @@ export function ConfigPanel({ settings, onUpdateSettings }: ConfigPanelProps) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#0A0A0B] text-zinc-300">
+    <div className="h-full flex flex-col bg-background-dark text-zinc-300">
       {/* Header */}
       <div className="px-4 py-4 border-b border-white/10">
         <h2 className="text-sm font-bold text-white tracking-tight">Generation Config</h2>

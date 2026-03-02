@@ -5,6 +5,10 @@
  * and runtime CSS variable application for theming.
  *
  * @module lib/accent
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
  */
 
 const ACCENT_KEY = "gtq_accent";

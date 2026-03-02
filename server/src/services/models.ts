@@ -1,7 +1,18 @@
-// ── Models service — download / extract / manage Vosk models ─────────────
-//
-// Model manifest is bundled at server/models.json.
-// Models download to ~/.getthatquick/models/<model-id>/
+/**
+ * @fileoverview Vosk model management service.
+ *
+ * Reads the bundled model manifest, tracks which models are downloaded,
+ * handles downloading and extracting model ZIPs (with speed/ETA progress),
+ * and supports cancellation of active downloads.
+ *
+ * Models are stored at `~/.getthatquick/models/<model-id>/`.
+ *
+ * @module services/models
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
+ */
 
 import { existsSync, rmSync, mkdirSync } from "node:fs";
 import { join } from "node:path";

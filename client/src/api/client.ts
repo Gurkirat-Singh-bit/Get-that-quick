@@ -6,6 +6,10 @@
  * `data` payload or throws an {@link ApiClientError} on failure.
  *
  * @module api/client
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
  */
 
 import type {
@@ -24,47 +28,95 @@ import type {
 const BASE = "/api";
 
 /**
- * Custom error thrown when the API responds with `{ ok: false }`.
+ * Custom error thrown when the API responds with `{ ok: false }` or network fails.
  *
  * @extends Error
  */
 export class ApiClientError extends Error {
   /** HTTP status code from the response. */
   status: number;
+  /** Whether this is a network/connectivity error. */
+  isNetworkError: boolean;
 
   /**
    * @param message - Human-readable error description from the API.
-   * @param status  - HTTP status code.
+   * @param status  - HTTP status code (0 for network errors).
+   * @param isNetworkError - Whether this is a network/connectivity issue.
    */
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, isNetworkError = false) {
     super(message);
     this.name = "ApiClientError";
     this.status = status;
+    this.isNetworkError = isNetworkError;
   }
 }
 
 /**
  * Internal helper – sends a request and unwraps the JSON envelope.
+ * Handles network errors, timeouts, and server failures gracefully.
  *
  * @template T  The expected shape of `data` inside `ApiResponse<T>`.
  * @param path    - Relative path appended to {@link BASE} (e.g. `/sessions`).
  * @param options - Standard `RequestInit` overrides.
  * @returns The unwrapped `data` value from the API.
- * @throws {ApiClientError} If the response is not ok.
+ * @throws {ApiClientError} If the response is not ok or network fails.
  */
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...options.headers },
-    ...options,
-  });
+  try {
+    const res = await fetch(`${BASE}${path}`, {
+      headers: { "Content-Type": "application/json", ...options.headers },
+      ...options,
+    });
 
-  const body = (await res.json()) as ApiResponse<T> | ApiError;
+    // Handle non-JSON responses (server errors, etc.)
+    let body: ApiResponse<T> | ApiError;
+    try {
+      body = (await res.json()) as ApiResponse<T> | ApiError;
+    } catch (jsonErr) {
+      // Server returned non-JSON (probably 500 error or similar)
+      throw new ApiClientError(
+        res.ok 
+          ? "Invalid response from server" 
+          : `Server error: ${res.status} ${res.statusText}`,
+        res.status
+      );
+    }
 
-  if (!body.ok) {
-    throw new ApiClientError((body as ApiError).error, res.status);
+    if (!body.ok) {
+      throw new ApiClientError((body as ApiError).error, res.status);
+    }
+
+    return (body as ApiResponse<T>).data;
+  } catch (err) {
+    // Network errors (offline, DNS failure, connection refused, etc.)
+    if (err instanceof TypeError) {
+      throw new ApiClientError(
+        "Network error: Please check your internet connection and ensure the server is running",
+        0,
+        true
+      );
+    }
+    
+    // Timeout errors
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new ApiClientError(
+        "Request timeout: The server took too long to respond",
+        0,
+        true
+      );
+    }
+
+    // Re-throw ApiClientError as-is
+    if (err instanceof ApiClientError) {
+      throw err;
+    }
+
+    // Unknown errors
+    throw new ApiClientError(
+      err instanceof Error ? err.message : "Unknown error occurred",
+      0
+    );
   }
-
-  return (body as ApiResponse<T>).data;
 }
 
 // ── Sessions ────────────────────────────────────────────────────────────
@@ -354,46 +406,70 @@ export async function downloadModel(
   id: string,
   onProgress?: (info: ModelDownloadProgress) => void
 ): Promise<void> {
-  const res = await fetch(`${BASE}/models/${id}/download`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
+  try {
+    const res = await fetch(`${BASE}/models/${id}/download`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
 
-  if (!res.ok || !res.body) {
-    let errorMsg = "Download failed";
-    try {
-      const body = await res.json();
-      errorMsg = body.error || errorMsg;
-    } catch {}
-    throw new ApiClientError(errorMsg, res.status);
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const payload = line.slice(6).trim();
-
+    if (!res.ok || !res.body) {
+      let errorMsg = "Download failed";
       try {
-        const parsed = JSON.parse(payload) as ModelDownloadProgress;
-        if (parsed.status === "complete") return;
-        if ("error" in parsed) throw new ApiClientError((parsed as any).error, 500);
-        if (onProgress) onProgress(parsed);
-      } catch (e) {
-        if (e instanceof ApiClientError) throw e;
-        // skip malformed chunks
-      }
+        const body = await res.json();
+        errorMsg = body.error || errorMsg;
+      } catch {}
+      throw new ApiClientError(errorMsg, res.status);
     }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6).trim();
+
+          try {
+            const parsed = JSON.parse(payload) as ModelDownloadProgress;
+            if (parsed.status === "complete") return;
+            if ("error" in parsed) throw new ApiClientError((parsed as any).error, 500);
+            if (onProgress) onProgress(parsed);
+          } catch (e) {
+            if (e instanceof ApiClientError) throw e;
+            // skip malformed chunks
+          }
+        }
+      }
+    } catch (readErr) {
+      // Network error during streaming
+      if (readErr instanceof TypeError) {
+        throw new ApiClientError(
+          "Network error during download: Connection lost. Please check your internet connection.",
+          0,
+          true
+        );
+      }
+      throw readErr;
+    }
+  } catch (err) {
+    // Network error on initial request
+    if (err instanceof TypeError) {
+      throw new ApiClientError(
+        "Network error: Cannot connect to server. Please check your internet connection.",
+        0,
+        true
+      );
+    }
+    throw err;
   }
 }
 
@@ -447,52 +523,99 @@ export function healthCheck(): Promise<{
  *
  * @param req - The generate request payload.
  * @yields Individual text chunks from the LLM.
+ * @throws {ApiClientError} On network failure or server error.
  *
  * @example
  * ```ts
- * for await (const chunk of generateStream({ systemPrompt: "...", messages })) {
- *   appendToUI(chunk);
+ * try {
+ *   for await (const chunk of generateStream({ systemPrompt: "...", messages })) {
+ *     appendToUI(chunk);
+ *   }
+ * } catch (err) {
+ *   if (err instanceof ApiClientError && err.isNetworkError) {
+ *     showNetworkError();
+ *   }
  * }
  * ```
  */
 export async function* generateStream(
-  req: GenerateRequest
+  req: GenerateRequest,
+  signal?: AbortSignal
 ): AsyncGenerator<string, void, unknown> {
-  const res = await fetch(`${BASE}/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...req, stream: true }),
-  });
+  let res: Response;
+  
+  try {
+    res = await fetch(`${BASE}/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...req, stream: true }),
+      signal,
+    });
+  } catch (err) {
+    // Abort is intentional — stop cleanly without an error
+    if (err instanceof DOMException && err.name === "AbortError") return;
+    // Network error on initial request
+    if (err instanceof TypeError) {
+      throw new ApiClientError(
+        "Network error: Cannot connect to server. Please check your internet connection.",
+        0,
+        true
+      );
+    }
+    throw err;
+  }
 
   if (!res.ok || !res.body) {
-    const body = await res.json();
-    throw new ApiClientError(body.error || "Stream failed", res.status);
+    let errorMsg = "Stream failed";
+    try {
+      const body = await res.json();
+      errorMsg = body.error || errorMsg;
+    } catch {}
+    throw new ApiClientError(errorMsg, res.status);
   }
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
 
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const payload = line.slice(6).trim();
-      if (payload === "[DONE]") return;
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const payload = line.slice(6).trim();
+        if (payload === "[DONE]") return;
 
-      try {
-        const parsed = JSON.parse(payload);
-        if (parsed.content) yield parsed.content;
-      } catch {
-        // skip malformed chunks
+        try {
+          const parsed = JSON.parse(payload);
+          if (parsed.error) {
+            throw new ApiClientError(parsed.error, 500);
+          }
+          if (parsed.content) yield parsed.content;
+        } catch (e) {
+          if (e instanceof ApiClientError) throw e;
+          // skip malformed chunks
+        }
       }
     }
+  } catch (readErr) {
+    // Abort is intentional — stop cleanly without an error
+    if (readErr instanceof DOMException && (readErr as DOMException).name === "AbortError") return;
+    // Network error during streaming
+    if (readErr instanceof TypeError || readErr instanceof DOMException) {
+      throw new ApiClientError(
+        "Network error during generation: Connection lost. Response may be incomplete.",
+        0,
+        true
+      );
+    }
+    throw readErr;
   }
 }
 

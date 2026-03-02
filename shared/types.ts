@@ -5,6 +5,10 @@
  * the Hono server and React client share a single source of truth.
  *
  * @module shared/types
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
  */
 
 // ── Sessions ──────────────────────────────────────────────────────────────
@@ -39,6 +43,8 @@ export interface Message {
   source?: "voice" | "text";
   /** ISO-8601 timestamp of when the message was created. */
   timestamp: string;
+  /** When true the message is an inline error, rendered as small red text. */
+  isError?: boolean;
 }
 
 /** Session metadata without the full message array. */

@@ -1,6 +1,16 @@
-// ── Sessions service — CRUD for chat sessions (JSON files) ───────────────
-//
-// Storage: ~/.getthatquick/prompts/<session-id>.json
+/**
+ * @fileoverview Session storage service.
+ *
+ * Reads and writes chat session JSON files on disk.
+ * Each session is stored as a single file under
+ * `~/.getthatquick/prompts/<session-id>.json`.
+ *
+ * @module services/sessions
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
+ */
 
 import {
   readFileSync,
@@ -124,6 +134,12 @@ export function deleteSession(id: string): boolean {
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
+/**
+ * Build the full path to a session JSON file.
+ *
+ * @param id - Session identifier.
+ * @returns Absolute path to `<data>/prompts/<id>.json`.
+ */
 function sessionPath(id: string): string {
   return join(getPromptsDir(), `${id}.json`);
 }

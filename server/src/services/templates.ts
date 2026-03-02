@@ -1,12 +1,20 @@
-// ── Templates service — CRUD for predefined LLM system prompts ───────────
-//
-// Templates are Markdown files with YAML frontmatter.
-// Storage: ~/.getthatquick/templates/local/<category>/<subcategory>/.../*.md
-//          ~/.getthatquick/templates/community/<category>/.../*.md
-//
-// Categories are hierarchical — the category string uses "/" as a separator
-// (e.g. "code/frontend") and maps to subdirectories on disk.
-// Legacy flat templates (no category subdirectory) are still supported.
+/**
+ * @fileoverview Template storage service.
+ *
+ * Templates are Markdown files with YAML frontmatter, stored in two places:
+ * - `~/.getthatquick/templates/local/` — user-created templates
+ * - `~/.getthatquick/templates/community/` — synced from GitHub
+ *
+ * Categories are hierarchical using `/` as separator (e.g. `"code/frontend"`)
+ * which maps to subdirectories on disk. Flat (legacy) templates are still
+ * supported.
+ *
+ * @module services/templates
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
+ */
 
 import {
   readFileSync,

@@ -6,6 +6,10 @@
  * Receives server-backed settings via props from the Dashboard.
  *
  * @module components/settings/settings-overlay
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-28
+ * @updated 2026-03-03
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -145,7 +149,7 @@ function GeneralSettings({ settings, onUpdateSettings }: { settings?: SettingsTy
                 if (e.key === "Enter" && customColor.length === 6) pickColor(`#${customColor}`);
               }}
               placeholder="Custom hex..."
-              className="w-full bg-[#0A0A0B] border border-[#1E1E22] rounded-lg py-2 pl-7 pr-3 text-xs text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/40"
+              className="w-full bg-background-dark border border-shell-border rounded-lg py-2 pl-7 pr-3 text-xs text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/40"
             />
           </div>
           <button
@@ -158,13 +162,13 @@ function GeneralSettings({ settings, onUpdateSettings }: { settings?: SettingsTy
       </div>
 
       {/* Font Family */}
-      <div className="border-t border-[#1E1E22] pt-6">
+      <div className="border-t border-shell-border pt-6">
         <h3 className="text-sm font-semibold text-white mb-1">Font Family</h3>
         <p className="text-xs text-zinc-500 mb-3">Choose the display font. Drop custom fonts in <code className="text-primary/80 bg-primary/5 px-1 rounded text-[10px]">public/fonts/</code></p>
         <select
           value={font}
           onChange={(e) => handleFontChange(e.target.value)}
-          className="w-full bg-[#0A0A0B] border border-[#1E1E22] rounded-lg py-2 px-3 text-xs text-zinc-300 outline-none focus:border-primary/40 cursor-pointer"
+          className="w-full bg-background-dark border border-shell-border rounded-lg py-2 px-3 text-xs text-zinc-300 outline-none focus:border-primary/40 cursor-pointer"
         >
           {fontOptions.map((f) => (
             <option key={f} value={f}>{f}</option>
@@ -176,11 +180,11 @@ function GeneralSettings({ settings, onUpdateSettings }: { settings?: SettingsTy
       </div>
 
       {/* Default Model */}
-      <div className="border-t border-[#1E1E22] pt-6">
+      <div className="border-t border-shell-border pt-6">
         <h3 className="text-sm font-semibold text-white mb-1">Default Model</h3>
         <p className="text-xs text-zinc-500 mb-3">Set the default LLM for new chats</p>
         {Object.keys(providers).length === 0 ? (
-          <p className="text-xs text-zinc-600 bg-[#0A0A0B] rounded-lg px-3 py-2.5 border border-[#1E1E22]">
+          <p className="text-xs text-zinc-600 bg-background-dark rounded-lg px-3 py-2.5 border border-shell-border">
             No providers configured. Add one in <span className="text-primary">Models & LLM</span> first.
           </p>
         ) : (
@@ -192,7 +196,7 @@ function GeneralSettings({ settings, onUpdateSettings }: { settings?: SettingsTy
                   await onUpdateSettings({ ai: { ...settings.ai, provider: e.target.value } });
                 }
               }}
-              className="w-full bg-[#0A0A0B] border border-[#1E1E22] rounded-lg py-2 px-3 text-xs text-zinc-300 outline-none focus:border-primary/40 cursor-pointer"
+              className="w-full bg-background-dark border border-shell-border rounded-lg py-2 px-3 text-xs text-zinc-300 outline-none focus:border-primary/40 cursor-pointer"
             >
               {Object.keys(providers).map((name) => (
                 <option key={name} value={name}>{name}</option>
@@ -208,7 +212,7 @@ function GeneralSettings({ settings, onUpdateSettings }: { settings?: SettingsTy
                     await onUpdateSettings({ ai: { ...settings.ai, providers: updated } });
                   }
                 }}
-                className="w-full bg-[#0A0A0B] border border-[#1E1E22] rounded-lg py-2 px-3 text-xs text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/40"
+                className="w-full bg-background-dark border border-shell-border rounded-lg py-2 px-3 text-xs text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/40"
                 placeholder="Model name (e.g. gpt-4o, claude-3.5-sonnet)"
               />
             )}
@@ -236,7 +240,7 @@ function TemplateSettings() {
             type="text"
             value={repoUrl}
             onChange={(e) => setRepoUrl(e.target.value)}
-            className="flex-1 bg-[#0A0A0B] border border-[#1E1E22] rounded-lg py-2 px-3 text-xs text-zinc-300 outline-none focus:border-primary/40"
+            className="flex-1 bg-background-dark border border-shell-border rounded-lg py-2 px-3 text-xs text-zinc-300 outline-none focus:border-primary/40"
             placeholder="https://github.com/org/templates"
           />
           <button className="px-3 py-2 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
@@ -246,7 +250,7 @@ function TemplateSettings() {
       </div>
 
       {/* Local Templates */}
-      <div className="border-t border-[#1E1E22] pt-6">
+      <div className="border-t border-shell-border pt-6">
         <div className="flex items-center gap-2 mb-1">
           <FileCode2 className="w-3.5 h-3.5 text-primary" />
           <h3 className="text-sm font-semibold text-white">Local Templates</h3>
@@ -427,7 +431,7 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
 
         {/* Provider presets dropdown */}
         {showPresets && (
-          <div className="mb-4 bg-[#0A0A0B] rounded-lg border border-[#1E1E22] p-3 space-y-1.5">
+          <div className="mb-4 bg-background-dark rounded-lg border border-shell-border p-3 space-y-1.5">
             <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-1 mb-2">Quick Add</p>
             {providerPresets.filter((p) => !providers[p.name]).map((preset) => (
               <button
@@ -445,7 +449,7 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
                 <Plus className="w-3 h-3 text-zinc-600 group-hover:text-primary transition-colors shrink-0" />
               </button>
             ))}
-            <div className="mt-2 pt-2 border-t border-[#1E1E22]">
+            <div className="mt-2 pt-2 border-t border-shell-border">
               <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-1 mb-2">Custom</p>
               <div className="flex gap-2">
                 <input
@@ -453,14 +457,14 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Provider name"
-                  className="flex-1 bg-[#161618] border border-[#1E1E22] rounded-lg py-1.5 px-2.5 text-[11px] text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/40"
+                  className="flex-1 bg-[#161618] border border-shell-border rounded-lg py-1.5 px-2.5 text-[11px] text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/40"
                 />
                 <input
                   type="text"
                   value={newUrl}
                   onChange={(e) => setNewUrl(e.target.value)}
                   placeholder="Base URL"
-                  className="flex-1 bg-[#161618] border border-[#1E1E22] rounded-lg py-1.5 px-2.5 text-[11px] text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/40"
+                  className="flex-1 bg-[#161618] border border-shell-border rounded-lg py-1.5 px-2.5 text-[11px] text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/40"
                 />
                 <button
                   onClick={() => handleAddProvider(newName, newUrl)}
@@ -478,7 +482,7 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
           {Object.entries(providers).map(([name, config]) => {
             const isExpanded = expandedCard === name;
             return (
-              <div key={name} className="bg-[#0A0A0B] rounded-lg border border-[#1E1E22]">
+              <div key={name} className="bg-background-dark rounded-lg border border-shell-border">
                 {/* Collapsed header — always visible */}
                 <div
                   className="flex items-center justify-between px-3 py-2.5 cursor-pointer"
@@ -532,7 +536,7 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
 
                 {/* Expanded form fields */}
                 {isExpanded && (
-                  <div className="px-3 pb-3 pt-1 border-t border-[#1E1E22]">
+                  <div className="px-3 pb-3 pt-1 border-t border-shell-border">
                     <input
                       type="text"
                       defaultValue={config.baseUrl}
@@ -565,7 +569,7 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
         </div>
 
         {Object.keys(providers).length === 0 && !showPresets && (
-          <div className="bg-[#0A0A0B] rounded-lg p-6 border border-[#1E1E22] text-center">
+          <div className="bg-background-dark rounded-lg p-6 border border-shell-border text-center">
             <BrainCircuit className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
             <p className="text-xs text-zinc-500 mb-2">No providers configured yet</p>
             <button
@@ -579,7 +583,7 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
       </div>
 
       {/* Generation Settings */}
-      <div className="border-t border-[#1E1E22] pt-6">
+      <div className="border-t border-shell-border pt-6">
         <h3 className="text-sm font-semibold text-white mb-1">Generation Settings</h3>
         <p className="text-xs text-zinc-500 mb-3">System prompt, temperature, and token settings</p>
 
@@ -594,7 +598,7 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
                 onUpdateSettings({ ai: { ...settings.ai, systemPrompt: e.target.value } });
               }
             }}
-            className="w-full bg-[#0A0A0B] border border-[#1E1E22] rounded-lg py-2 px-3 text-[11px] text-zinc-300 outline-none focus:border-primary/40 resize-y leading-relaxed"
+            className="w-full bg-background-dark border border-shell-border rounded-lg py-2 px-3 text-[11px] text-zinc-300 outline-none focus:border-primary/40 resize-y leading-relaxed"
             placeholder="You are a helpful assistant..."
           />
           <p className="text-[10px] text-zinc-600 mt-1">Templates override this per-session.</p>
@@ -617,7 +621,7 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
                 onUpdateSettings({ ai: { ...settings.ai, temperature: parseFloat(e.target.value) } });
               }
             }}
-            className="w-full h-1 bg-[#1E1E22] rounded-lg appearance-none cursor-pointer accent-primary"
+            className="w-full h-1 bg-shell-border rounded-lg appearance-none cursor-pointer accent-primary"
           />
           <div className="flex justify-between mt-0.5">
             <span className="text-[9px] text-zinc-700">Precise</span>
@@ -638,16 +642,16 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
                 onUpdateSettings({ ai: { ...settings.ai, maxTokens: parseInt(e.target.value) || 0 } });
               }
             }}
-            className="w-full bg-[#0A0A0B] border border-[#1E1E22] rounded-lg py-2 px-3 text-xs text-zinc-300 outline-none focus:border-primary/40"
+            className="w-full bg-background-dark border border-shell-border rounded-lg py-2 px-3 text-xs text-zinc-300 outline-none focus:border-primary/40"
             placeholder="0 = model default"
           />
         </div>
       </div>
 
-      <div className="border-t border-[#1E1E22] pt-6">
+      <div className="border-t border-shell-border pt-6">
         <h3 className="text-sm font-semibold text-white mb-1">Active Provider</h3>
         {activeProvider ? (
-          <div className="bg-[#0A0A0B] rounded-lg px-3 py-2.5 border border-[#1E1E22]">
+          <div className="bg-background-dark rounded-lg px-3 py-2.5 border border-shell-border">
             <p className="text-xs text-zinc-400">
               Provider: <span className="text-primary font-medium">{activeProvider}</span>
             </p>
@@ -658,7 +662,7 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
             )}
           </div>
         ) : (
-          <p className="text-xs text-zinc-600 bg-[#0A0A0B] rounded-lg px-3 py-2.5 border border-[#1E1E22]">
+          <p className="text-xs text-zinc-600 bg-background-dark rounded-lg px-3 py-2.5 border border-shell-border">
             No active provider. Add and configure one above.
           </p>
         )}
@@ -678,7 +682,7 @@ function BackupSettings() {
           Export Everything (JSON)
         </button>
       </div>
-      <div className="border-t border-[#1E1E22] pt-6">
+      <div className="border-t border-shell-border pt-6">
         <h3 className="text-sm font-semibold text-white mb-1">Import Data</h3>
         <p className="text-xs text-zinc-500 mb-3">Restore from a previous export</p>
         <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/5 text-zinc-300 text-xs font-medium hover:bg-white/8 transition-colors">
@@ -686,7 +690,7 @@ function BackupSettings() {
           Import from File
         </button>
       </div>
-      <div className="border-t border-[#1E1E22] pt-6">
+      <div className="border-t border-shell-border pt-6">
         <h3 className="text-sm font-semibold text-white mb-1">Reset</h3>
         <p className="text-xs text-zinc-500 mb-3">Clear all data and start fresh</p>
         <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-500/10 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-colors">
@@ -739,7 +743,19 @@ function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType
       });
       refreshModels();
     } catch (err: any) {
-      setError(err.message || "Download failed");
+      let errorMsg = "Download failed";
+      
+      if (err instanceof api.ApiClientError) {
+        if (err.isNetworkError) {
+          errorMsg = "Network error: Please check your internet connection";
+        } else {
+          errorMsg = err.message;
+        }
+      } else {
+        errorMsg = err.message || errorMsg;
+      }
+      
+      setError(errorMsg);
     } finally {
       setDownloading((prev) => { const next = new Set(prev); next.delete(id); return next; });
       setDownloadProgress((prev) => { const next = { ...prev }; delete next[id]; return next; });
@@ -755,7 +771,15 @@ function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType
         refreshModels();
       }
     } catch (err: any) {
-      setError(err.message || "Cancel failed");
+      let errorMsg = "Cancel failed";
+      
+      if (err instanceof api.ApiClientError && err.isNetworkError) {
+        errorMsg = "Network error: Could not cancel download";
+      } else {
+        errorMsg = err.message || errorMsg;
+      }
+      
+      setError(errorMsg);
     }
   };
 
@@ -808,7 +832,7 @@ function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType
 
         <div className="space-y-2">
           {models.map((model) => (
-            <div key={model.id} className="bg-[#0A0A0B] rounded-lg px-3 py-3 border border-[#1E1E22]">
+            <div key={model.id} className="bg-background-dark rounded-lg px-3 py-3 border border-shell-border">
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
                   <Mic className="w-3.5 h-3.5 text-zinc-500" />
@@ -861,7 +885,7 @@ function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType
                 ) : downloading.has(model.id) ? (
                   <div className="flex flex-col gap-1.5 w-full">
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 h-1.5 bg-[#1E1E22] rounded-full overflow-hidden">
+                      <div className="flex-1 h-1.5 bg-shell-border rounded-full overflow-hidden">
                         <div
                           className="h-full bg-primary rounded-full transition-all duration-300"
                           style={{ width: `${downloadProgress[model.id]?.percent ?? 0}%` }}
@@ -916,17 +940,17 @@ function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType
         </div>
 
         {models.length === 0 && (
-          <div className="bg-[#0A0A0B] rounded-lg p-6 border border-[#1E1E22] text-center">
+          <div className="bg-background-dark rounded-lg p-6 border border-shell-border text-center">
             <Mic className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
             <p className="text-xs text-zinc-500">No voice models available</p>
           </div>
         )}
       </div>
 
-      <div className="border-t border-[#1E1E22] pt-6">
+      <div className="border-t border-shell-border pt-6">
         <h3 className="text-sm font-semibold text-white mb-1">Active Model</h3>
         {settings?.stt?.activeModel ? (
-          <div className="bg-[#0A0A0B] rounded-lg px-3 py-2.5 border border-[#1E1E22]">
+          <div className="bg-background-dark rounded-lg px-3 py-2.5 border border-shell-border">
             <p className="text-xs text-zinc-400">
               Model: <span className="text-primary font-medium">{settings.stt.activeModel}</span>
             </p>
@@ -935,7 +959,7 @@ function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType
             </p>
           </div>
         ) : (
-          <p className="text-xs text-zinc-600 bg-[#0A0A0B] rounded-lg px-3 py-2.5 border border-[#1E1E22]">
+          <p className="text-xs text-zinc-600 bg-background-dark rounded-lg px-3 py-2.5 border border-shell-border">
             No active voice model. Download and activate one above.
           </p>
         )}
@@ -951,7 +975,7 @@ function AboutSettings() {
         <h3 className="text-lg font-bold text-white mb-1">GetThatQuick</h3>
         <p className="text-xs text-zinc-500">Self-hosted prompt workbench</p>
       </div>
-      <div className="bg-[#0A0A0B] rounded-lg p-4 space-y-2 border border-[#1E1E22]">
+      <div className="bg-background-dark rounded-lg p-4 space-y-2 border border-shell-border">
         <div className="flex justify-between text-xs">
           <span className="text-zinc-500">Version</span>
           <span className="text-zinc-300">0.0.1-alpha</span>
@@ -965,14 +989,14 @@ function AboutSettings() {
           <span className="text-zinc-300">MIT</span>
         </div>
       </div>
-      <div className="border-t border-[#1E1E22] pt-6">
+      <div className="border-t border-shell-border pt-6">
         <h3 className="text-sm font-semibold text-white mb-3">Links</h3>
         <div className="space-y-2">
           <a
             href="https://github.com/getthatquick/getthatquick"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 bg-[#0A0A0B] rounded-lg px-3 py-2.5 text-xs text-zinc-300 hover:bg-white/4 transition-colors group border border-[#1E1E22]"
+            className="flex items-center gap-3 bg-background-dark rounded-lg px-3 py-2.5 text-xs text-zinc-300 hover:bg-white/4 transition-colors group border border-shell-border"
           >
             <Github className="w-4 h-4 text-zinc-500 group-hover:text-white transition-colors" />
             <div className="flex-1">
@@ -985,7 +1009,7 @@ function AboutSettings() {
             href="https://github.com/getthatquick/getthatquick/wiki"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 bg-[#0A0A0B] rounded-lg px-3 py-2.5 text-xs text-zinc-300 hover:bg-white/4 transition-colors group border border-[#1E1E22]"
+            className="flex items-center gap-3 bg-background-dark rounded-lg px-3 py-2.5 text-xs text-zinc-300 hover:bg-white/4 transition-colors group border border-shell-border"
           >
             <BookOpen className="w-4 h-4 text-zinc-500 group-hover:text-white transition-colors" />
             <div className="flex-1">
@@ -996,7 +1020,7 @@ function AboutSettings() {
           </a>
         </div>
       </div>
-      <div className="border-t border-[#1E1E22] pt-6">
+      <div className="border-t border-shell-border pt-6">
         <p className="text-xs text-zinc-500 leading-relaxed">
           A local-first, self-hosted prompt toolkit designed for developers. Manage prompts, templates, and chat sessions — all running on your machine.
         </p>
@@ -1029,9 +1053,9 @@ export function SettingsOverlay({ onClose, settings, onUpdateSettings, onTestPro
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel */}
-      <div className="relative z-10 w-[720px] max-w-[90vw] h-[520px] max-h-[85vh] bg-[#0E0E10] rounded-2xl border border-[#1E1E22] shadow-2xl flex overflow-hidden">
+      <div className="relative z-10 w-180 max-w-[90vw] h-130 max-h-[85vh] bg-[#0E0E10] rounded-2xl border border-shell-border shadow-2xl flex overflow-hidden">
         {/* Left nav */}
-        <nav className="w-48 shrink-0 border-r border-[#1E1E22] p-3 flex flex-col gap-0.5">
+        <nav className="w-48 shrink-0 border-r border-shell-border p-3 flex flex-col gap-0.5">
           <h2 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-3 pt-2 pb-3">
             Settings
           </h2>
@@ -1055,7 +1079,7 @@ export function SettingsOverlay({ onClose, settings, onUpdateSettings, onTestPro
 
         {/* Content */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#1E1E22]">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-shell-border">
             <h2 className="text-sm font-semibold text-white capitalize">{active}</h2>
             <button
               onClick={onClose}

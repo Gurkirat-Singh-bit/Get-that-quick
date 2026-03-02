@@ -1,8 +1,15 @@
-// ── Data directory resolution ─────────────────────────────────────────────
-//
-// Priority: DATA_DIR env → ~/.getthatquick/
-// In Docker the env var is set to /data (bind-mounted from host).
-// In dev mode it falls back to ~/.getthatquick/ on the host.
+/**
+ * @fileoverview Data directory path helpers.
+ *
+ * All paths used by the server are derived from here.
+ * Priority: `DATA_DIR` env var (Docker) → `~/.getthatquick/` (local).
+ *
+ * @module lib/paths
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
+ */
 
 import { homedir } from "node:os";
 import { join } from "node:path";

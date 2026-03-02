@@ -130,6 +130,16 @@
     "default": false
   },
   {
+    "id": "vosk-model-es-0.42",
+    "name": "Spanish — Large",
+    "language": "es",
+    "size": "1.4 GB",
+    "accuracy": "9.1 WER",
+    "minRAM": "4 GB",
+    "url": "https://alphacephei.com/vosk/models/vosk-model-es-0.42.zip",
+    "default": false
+  },
+  {
     "id": "vosk-model-small-pt-0.3",
     "name": "Portuguese — Small",
     "language": "pt",
@@ -147,6 +157,16 @@
     "accuracy": "16.0 WER",
     "minRAM": "256 MB",
     "url": "https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip",
+    "default": false
+  },
+  {
+    "id": "vosk-model-cn-0.22",
+    "name": "Chinese — Large",
+    "language": "cn",
+    "size": "1.3 GB",
+    "accuracy": "12.0 WER",
+    "minRAM": "4 GB",
+    "url": "https://alphacephei.com/vosk/models/vosk-model-cn-0.22.zip",
     "default": false
   },
   {
@@ -170,6 +190,16 @@
     "default": false
   },
   {
+    "id": "vosk-model-ru-0.22",
+    "name": "Russian — Large",
+    "language": "ru",
+    "size": "1.8 GB",
+    "accuracy": "9.0 WER",
+    "minRAM": "5 GB",
+    "url": "https://alphacephei.com/vosk/models/vosk-model-ru-0.22.zip",
+    "default": false
+  },
+  {
     "id": "vosk-model-small-ko-0.22",
     "name": "Korean — Small",
     "language": "ko",
@@ -190,6 +220,16 @@
     "default": false
   },
   {
+    "id": "vosk-model-it-0.22",
+    "name": "Italian — Large",
+    "language": "it",
+    "size": "1.2 GB",
+    "accuracy": "10.0 WER",
+    "minRAM": "3 GB",
+    "url": "https://alphacephei.com/vosk/models/vosk-model-it-0.22.zip",
+    "default": false
+  },
+  {
     "id": "vosk-model-small-tr-0.3",
     "name": "Turkish — Small",
     "language": "tr",
@@ -197,6 +237,66 @@
     "accuracy": "15.0 WER",
     "minRAM": "256 MB",
     "url": "https://alphacephei.com/vosk/models/vosk-model-small-tr-0.3.zip",
+    "default": false
+  },
+  {
+    "id": "vosk-model-small-nl-0.22",
+    "name": "Dutch — Small",
+    "language": "nl",
+    "size": "39 MB",
+    "accuracy": "16.0 WER",
+    "minRAM": "256 MB",
+    "url": "https://alphacephei.com/vosk/models/vosk-model-small-nl-0.22.zip",
+    "default": false
+  },
+  {
+    "id": "vosk-model-nl-spraakherkenning-0.6",
+    "name": "Dutch — Large",
+    "language": "nl",
+    "size": "860 MB",
+    "accuracy": "11.0 WER",
+    "minRAM": "3 GB",
+    "url": "https://alphacephei.com/vosk/models/vosk-model-nl-spraakherkenning-0.6.zip",
+    "default": false
+  },
+  {
+    "id": "vosk-model-small-pl-0.22",
+    "name": "Polish — Small",
+    "language": "pl",
+    "size": "50 MB",
+    "accuracy": "18.0 WER",
+    "minRAM": "256 MB",
+    "url": "https://alphacephei.com/vosk/models/vosk-model-small-pl-0.22.zip",
+    "default": false
+  },
+  {
+    "id": "vosk-model-pl-0.22",
+    "name": "Polish — Large",
+    "language": "pl",
+    "size": "1.8 GB",
+    "accuracy": "11.0 WER",
+    "minRAM": "5 GB",
+    "url": "https://alphacephei.com/vosk/models/vosk-model-pl-0.22.zip",
+    "default": false
+  },
+  {
+    "id": "vosk-model-small-uk-v3-small",
+    "name": "Ukrainian — Small",
+    "language": "uk",
+    "size": "133 MB",
+    "accuracy": "20.0 WER",
+    "minRAM": "512 MB",
+    "url": "https://alphacephei.com/vosk/models/vosk-model-small-uk-v3-small.zip",
+    "default": false
+  },
+  {
+    "id": "vosk-model-uk-v3",
+    "name": "Ukrainian — Large",
+    "language": "uk",
+    "size": "343 MB",
+    "accuracy": "14.0 WER",
+    "minRAM": "1 GB",
+    "url": "https://alphacephei.com/vosk/models/vosk-model-uk-v3.zip",
     "default": false
   }
 ]

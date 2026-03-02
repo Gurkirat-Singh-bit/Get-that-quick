@@ -1,4 +1,17 @@
-// ── Templates routes — /api/templates ────────────────────────────────────
+/**
+ * @fileoverview HTTP routes for prompt template management.
+ *
+ * Handles listing, creating, updating, and deleting templates.
+ * Also supports syncing community templates from a GitHub repo.
+ *
+ * Base path: `/api/templates`
+ *
+ * @module routes/templates
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
+ */
 
 import { Hono } from "hono";
 import { nanoid } from "nanoid";
@@ -7,24 +20,41 @@ import type { Template } from "@shared/types";
 
 const templates = new Hono();
 
-// List all templates (local + community, metadata only)
+/**
+ * `GET /api/templates`
+ *
+ * Lists all templates (local and community), metadata only.
+ */
 templates.get("/", (c) => {
   return c.json({ ok: true, data: svc.listTemplates() });
 });
 
-// List all discovered categories
+/**
+ * `GET /api/templates/categories`
+ *
+ * Lists all unique category names across all templates.
+ */
 templates.get("/categories", (c) => {
   return c.json({ ok: true, data: svc.listCategories() });
 });
 
-// Get single template (full content)
+/**
+ * `GET /api/templates/:id`
+ *
+ * Returns a single template with its full content.
+ */
 templates.get("/:id", (c) => {
   const tmpl = svc.getTemplate(c.req.param("id"));
   if (!tmpl) return c.json({ ok: false, error: "Template not found" }, 404);
   return c.json({ ok: true, data: tmpl });
 });
 
-// Create local template
+/**
+ * `POST /api/templates`
+ *
+ * Creates a new local template.
+ * Requires `title` and `content`; other fields are optional.
+ */
 templates.post("/", async (c) => {
   const body = await c.req.json<{
     title: string;
@@ -50,7 +80,11 @@ templates.post("/", async (c) => {
   return c.json({ ok: true, data: svc.createTemplate(tmpl) }, 201);
 });
 
-// Update local template
+/**
+ * `PUT /api/templates/:id`
+ *
+ * Updates a local template. Community templates cannot be edited.
+ */
 templates.put("/:id", async (c) => {
   const body = await c.req.json<Partial<Template>>();
   const updated = svc.updateTemplate(c.req.param("id"), body);
@@ -63,7 +97,11 @@ templates.put("/:id", async (c) => {
   return c.json({ ok: true, data: updated });
 });
 
-// Delete local template
+/**
+ * `DELETE /api/templates/:id`
+ *
+ * Deletes a local template. Community templates cannot be deleted this way.
+ */
 templates.delete("/:id", (c) => {
   const ok = svc.deleteTemplate(c.req.param("id"));
   if (!ok) {
@@ -75,7 +113,12 @@ templates.delete("/:id", (c) => {
   return c.json({ ok: true, data: null });
 });
 
-// Sync community templates from a GitHub repo
+/**
+ * `POST /api/templates/sync`
+ *
+ * Downloads and caches community templates from a GitHub repo.
+ * Accepts an optional `repoUrl` in the request body.
+ */
 templates.post("/sync", async (c) => {
   try {
     const body = await c.req.json<{ repoUrl?: string }>().catch(() => ({ repoUrl: undefined }));

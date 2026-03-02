@@ -1,4 +1,16 @@
-// ── Settings service — read/write ~/.getthatquick/config/settings.json ────
+/**
+ * @fileoverview Application settings service.
+ *
+ * Reads and writes `settings.json` from the config directory.
+ * Keeps an in-memory cache so the disk is only read once per process.
+ * Use {@link invalidateCache} to force a re-read.
+ *
+ * @module services/config
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
+ */
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { getSettingsPath } from "../lib/paths";
@@ -63,6 +75,14 @@ export function invalidateCache(): void {
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
+/**
+ * Deep-merge `source` into `target`, returning a new object.
+ * Plain objects are merged recursively; arrays and primitives are replaced.
+ *
+ * @param target - Base object to merge into.
+ * @param source - Partial overrides to apply.
+ * @returns Merged copy of target with source applied.
+ */
 function deepMerge<T extends Record<string, unknown>>(
   target: T,
   source: Partial<T>

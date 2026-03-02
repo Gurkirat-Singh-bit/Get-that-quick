@@ -5,6 +5,10 @@
  * my templates, create new, and import/export.
  *
  * @module components/layout/right-icon-rail
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
  */
 
 import {
@@ -58,7 +62,7 @@ export function RightIconRail({
   };
 
   return (
-    <aside className="w-14 flex flex-col items-center py-5 gap-1.5 shrink-0 bg-[#0A0A0B]">
+    <aside className="w-14 flex flex-col items-center py-5 gap-1.5 shrink-0 bg-background-dark">
       {/* Top icon */}
       <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2 bg-primary/10">
         <LayoutTemplate className="w-4 h-4 text-primary" />
@@ -76,7 +80,7 @@ export function RightIconRail({
                 : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
             )}
           >
-            <LayoutTemplate className="w-[18px] h-[18px]" />
+            <LayoutTemplate className="w-4.5 h-4.5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="left" sideOffset={10}>All Templates</TooltipContent>
@@ -94,7 +98,7 @@ export function RightIconRail({
                 : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
             )}
           >
-            <Globe className="w-[18px] h-[18px]" />
+            <Globe className="w-4.5 h-4.5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="left" sideOffset={10}>Community</TooltipContent>
@@ -112,7 +116,7 @@ export function RightIconRail({
                 : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
             )}
           >
-            <FolderOpen className="w-[18px] h-[18px]" />
+            <FolderOpen className="w-4.5 h-4.5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="left" sideOffset={10}>My Templates</TooltipContent>
@@ -125,7 +129,7 @@ export function RightIconRail({
             onClick={onCreateTemplate}
             className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-white hover:bg-white/5 transition-all"
           >
-            <FilePlus2 className="w-[18px] h-[18px]" />
+            <FilePlus2 className="w-4.5 h-4.5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="left" sideOffset={10}>New Template</TooltipContent>
@@ -137,7 +141,7 @@ export function RightIconRail({
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
           <button className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-all">
-            <Download className="w-[18px] h-[18px]" />
+            <Download className="w-4.5 h-4.5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="left" sideOffset={10}>Import Templates</TooltipContent>

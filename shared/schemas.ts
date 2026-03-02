@@ -10,6 +10,10 @@
  * at runtime since this is only used server-side.
  *
  * @module shared/schemas
+ * @license CC BY-NC 4.0 — {@link https://creativecommons.org/licenses/by-nc/4.0/}
+ * @author Gurkirat Singh
+ * @created 2026-02-25
+ * @updated 2026-03-03
  */
 
 // @ts-expect-error - Zod is in server's node_modules, not shared/
@@ -24,6 +28,7 @@ export const MessageSchema = z.object({
   content: z.string(),
   source: z.enum(["voice", "text"]).optional(),
   timestamp: z.string().datetime(),
+  isError: z.boolean().optional(),
 });
 
 /** Zod schema for validating complete session objects. */
