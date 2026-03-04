@@ -11,14 +11,15 @@
  * @updated 2026-03-03
  */
 
-import { useState, useRef, useEffect, type DragEvent } from "react";
+import { useState, useRef, useEffect, useMemo, type DragEvent } from "react";
 import {
-  Search, Plus, Trash2, MessageCircle,
-  ChevronDown, ChevronRight, GripVertical, FolderPlus,
-  Pencil, Check, X,
+  Search, Trash2, MessageCircle,
+  ChevronDown, ChevronRight, GripVertical, FolderPlus, FolderKanban,
+  Pencil, Check, X, Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { GtqLogo } from "@/components/brand/gtq-logo";
 import type { SessionMeta, Project } from "@shared/types";
 
 /** Props accepted by {@link LeftSidebar}. */
@@ -26,7 +27,6 @@ interface LeftSidebarProps {
   sessions: SessionMeta[];
   activeSessionId: string | null;
   onSelectSession: (id: string) => void;
-  onCreateSession: (title?: string) => Promise<void>;
   onDeleteSession: (id: string) => Promise<void>;
   /** Rename a session. */
   onRenameSession: (id: string, title: string) => Promise<void>;
@@ -41,6 +41,14 @@ interface LeftSidebarProps {
   onRenameProject: (id: string, name: string) => void;
   /** Move a session into a project (null = ungrouped). */
   onMoveSession: (sessionId: string, projectId: string | null) => void;
+  /**
+   * Controls which primary view is displayed.
+   * - `"chats"` — flat chronological list of all sessions.
+   * - `"projects"` — project tree with grouped sessions.
+   */
+  viewMode: "chats" | "projects";
+  /** Create a new chat session. */
+  onNewChat?: () => void;
 }
 
 function timeAgo(iso: string): string {
@@ -53,8 +61,6 @@ function timeAgo(iso: string): string {
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
 }
-
-const PROJECT_COLORS = ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#f97316"];
 
 /** A single session row — draggable, with inline rename. */
 function SessionRow({
@@ -160,9 +166,9 @@ function SessionRow({
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between mb-0.5">
-              <span className="text-xs font-medium truncate pr-2">{session.title}</span>
-              <span className="text-[10px] text-zinc-600 shrink-0">{timeAgo(session.updatedAt)}</span>
+            <div className="flex items-center justify-between mb-0.5 min-w-0 overflow-hidden">
+              <span className="text-xs font-medium truncate min-w-0 flex-1 pr-1">{session.title}</span>
+              <span className="text-[10px] text-zinc-600 shrink-0 ml-1">{timeAgo(session.updatedAt)}</span>
             </div>
             <p className="text-[11px] text-zinc-500 truncate">
               {session.messageCount} message{session.messageCount !== 1 ? "s" : ""}
@@ -199,7 +205,6 @@ export function LeftSidebar({
   sessions,
   activeSessionId,
   onSelectSession,
-  onCreateSession,
   onDeleteSession,
   onRenameSession,
   loading,
@@ -208,6 +213,8 @@ export function LeftSidebar({
   onDeleteProject,
   onRenameProject,
   onMoveSession,
+  viewMode,
+  onNewChat,
 }: LeftSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -216,7 +223,6 @@ export function LeftSidebar({
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [editProjectValue, setEditProjectValue] = useState("");
-  const nextColor = useRef(0);
   const projectInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -226,8 +232,18 @@ export function LeftSidebar({
     }
   }, [editingProjectId]);
 
-  const filtered = sessions.filter(
-    (s) => !searchQuery || s.title.toLowerCase().includes(searchQuery.toLowerCase())
+  /** All sessions matching the current search query. */
+  const filtered = useMemo(
+    () => sessions.filter(
+      (s) => !searchQuery || s.title.toLowerCase().includes(searchQuery.toLowerCase()),
+    ),
+    [sessions, searchQuery],
+  );
+
+  /** Sessions sorted newest-first for the flat chats view. */
+  const allSortedSessions = useMemo(
+    () => [...filtered].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
+    [filtered],
   );
 
   const ungrouped = filtered.filter((s) => !s.projectId);
@@ -238,7 +254,7 @@ export function LeftSidebar({
     onCreateProject(newProjectName.trim());
     setNewProjectName("");
     setCreatingProject(false);
-    nextColor.current = (nextColor.current + 1) % PROJECT_COLORS.length;
+    // Color cycling is owned by Dashboard; nothing to track locally
   };
 
   const handleDrop = (e: DragEvent, projectId: string | null) => {
@@ -255,7 +271,15 @@ export function LeftSidebar({
   };
 
   return (
-    <div className="w-72 h-full flex flex-col bg-[#0E0E10] text-zinc-300 border-r border-[#1A1A1E]">
+    <div className="w-full h-full flex flex-col bg-[#0E0E10] text-zinc-300 border-r border-[#1A1A1E]">
+      {/* Brand header — full logo with wordmark */}
+      <div className="px-3 pt-3.5 pb-1 shrink-0 flex items-center justify-between">
+        <GtqLogo iconSize={22} />
+        <span className="text-[9px] font-semibold uppercase tracking-widest text-zinc-600 bg-white/4 px-1.5 py-0.5 rounded">
+          {viewMode === "chats" ? "Chats" : "Projects"}
+        </span>
+      </div>
+
       {/* Search */}
       <div className="p-3 pb-2 shrink-0">
         <div className="relative">
@@ -272,18 +296,114 @@ export function LeftSidebar({
 
       <ScrollArea className="flex-1">
         <div className="px-2 pb-4">
-          {/* Projects Section */}
-          {projects.length > 0 && (
-            <div className="mb-2">
+          {viewMode === "chats" ? (
+            /* ── Chats view: flat chronological list of every session ── */
+            <div>
               <div className="flex items-center justify-between px-3 py-2">
-                <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Projects</h3>
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">All Chats</h3>
+                {onNewChat && (
+                  <button
+                    onClick={onNewChat}
+                    className="w-5 h-5 flex items-center justify-center rounded-md text-zinc-500 hover:text-primary hover:bg-white/5 transition-colors"
+                    title="New chat"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              {loading && (
+                <p className="px-3 py-4 text-[11px] text-zinc-600 text-center">Loading…</p>
+              )}
+
+              {!loading && allSortedSessions.length === 0 && (
+                <div className="px-3 py-8 text-center">
+                  <MessageCircle className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
+                  <p className="text-[11px] text-zinc-600">
+                    {searchQuery ? "No chats match your search" : "No chats yet — type a message to begin"}
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-0.5">
+                {allSortedSessions.map((session) => (
+                  <SessionRow
+                    key={session.id}
+                    session={session}
+                    isActive={activeSessionId === session.id}
+                    onSelect={() => onSelectSession(session.id)}
+                    onDelete={() => onDeleteSession(session.id)}
+                    onRename={(title) => onRenameSession(session.id, title)}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* ── Projects view: project tree with grouped sessions ── */
+            <div>
+              {/* Projects section header */}
+              <div className="flex items-center justify-between px-3 py-2">
+                <div className="flex items-center gap-1.5">
+                  <FolderKanban className="w-3 h-3 text-zinc-500" />
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Projects</h3>
+                </div>
                 <button
                   onClick={() => setCreatingProject(true)}
                   className="w-5 h-5 flex items-center justify-center rounded-md text-zinc-500 hover:text-primary hover:bg-white/5 transition-colors"
+                  title="New project"
                 >
                   <Plus className="w-3 h-3" />
                 </button>
               </div>
+
+              {/* Inline create project form */}
+              {creatingProject && (
+                <div className="mx-2 mb-2 bg-background-dark rounded-lg p-2 border border-[#1A1A1E]">
+                  <input
+                    type="text"
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleCreateProject();
+                      if (e.key === "Escape") { setCreatingProject(false); setNewProjectName(""); }
+                    }}
+                    placeholder="Project name..."
+                    autoFocus
+                    className="w-full bg-transparent text-xs text-zinc-300 placeholder:text-zinc-600 outline-none mb-2"
+                  />
+                  <div className="flex gap-1.5 justify-end">
+                    <button
+                      onClick={() => { setCreatingProject(false); setNewProjectName(""); }}
+                      className="px-2 py-1 text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleCreateProject}
+                      className="px-2 py-1 text-[10px] bg-primary/10 text-primary rounded-md hover:bg-primary/20 transition-colors"
+                    >
+                      Create
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {loading && (
+                <p className="px-3 py-4 text-[11px] text-zinc-600 text-center">Loading…</p>
+              )}
+
+              {!loading && projects.length === 0 && !creatingProject && (
+                <div className="px-3 py-8 text-center">
+                  <FolderPlus className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
+                  <p className="text-[11px] text-zinc-600 mb-2">No projects yet</p>
+                  <button
+                    onClick={() => setCreatingProject(true)}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    Create a project
+                  </button>
+                </div>
+              )}
 
               {projects.map((project) => {
                 const isCollapsed = collapsed[project.id] ?? false;
@@ -293,7 +413,7 @@ export function LeftSidebar({
 
                 return (
                   <div key={project.id} className="mb-1">
-                    {/* Project header — drop target */}
+                    {/* Project header — drop target for drag-and-drop */}
                     <div
                       onDragOver={(e) => handleDragOver(e, project.id)}
                       onDragLeave={() => setDragOverTarget(null)}
@@ -370,7 +490,7 @@ export function LeftSidebar({
                       )}
                     </div>
 
-                    {/* Project sessions */}
+                    {/* Grouped sessions under the project */}
                     {!isCollapsed && (
                       <div className="pl-3 space-y-0.5 mt-0.5">
                         {projectSessions.map((session) => (
@@ -394,103 +514,36 @@ export function LeftSidebar({
                 );
               })}
 
-              <div className="mx-3 my-2 border-t border-[#1A1A1E]" />
+              {/* Ungrouped chats — drop zone to remove from project */}
+              {ungrouped.length > 0 && (
+                <div
+                  onDragOver={(e) => handleDragOver(e, "__ungrouped__")}
+                  onDragLeave={() => setDragOverTarget(null)}
+                  onDrop={(e) => handleDrop(e, null)}
+                >
+                  <div className="mx-3 my-2 border-t border-[#1A1A1E]" />
+                  <div className="px-3 py-2">
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Unassigned</h3>
+                  </div>
+                  <div className={cn(
+                    "space-y-0.5 rounded-lg transition-colors",
+                    dragOverTarget === "__ungrouped__" && "bg-primary/5"
+                  )}>
+                    {ungrouped.map((session) => (
+                      <SessionRow
+                        key={session.id}
+                        session={session}
+                        isActive={activeSessionId === session.id}
+                        onSelect={() => onSelectSession(session.id)}
+                        onDelete={() => onDeleteSession(session.id)}
+                        onRename={(title) => onRenameSession(session.id, title)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-
-          {/* Create Project inline */}
-          {creatingProject && (
-            <div className="mx-2 mb-2 bg-background-dark rounded-lg p-2 border border-[#1A1A1E]">
-              <input
-                type="text"
-                value={newProjectName}
-                onChange={(e) => setNewProjectName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleCreateProject();
-                  if (e.key === "Escape") { setCreatingProject(false); setNewProjectName(""); }
-                }}
-                placeholder="Project name..."
-                autoFocus
-                className="w-full bg-transparent text-xs text-zinc-300 placeholder:text-zinc-600 outline-none mb-2"
-              />
-              <div className="flex gap-1.5 justify-end">
-                <button
-                  onClick={() => { setCreatingProject(false); setNewProjectName(""); }}
-                  className="px-2 py-1 text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCreateProject}
-                  className="px-2 py-1 text-[10px] bg-primary/10 text-primary rounded-md hover:bg-primary/20 transition-colors"
-                >
-                  Create
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Ungrouped Chats -- also a drop zone to remove from project */}
-          <div
-            onDragOver={(e) => handleDragOver(e, "__ungrouped__")}
-            onDragLeave={() => setDragOverTarget(null)}
-            onDrop={(e) => handleDrop(e, null)}
-          >
-            <div className="flex items-center justify-between px-3 py-2">
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                Chats
-              </h3>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setCreatingProject(true)}
-                  className="w-5 h-5 flex items-center justify-center rounded-md text-zinc-500 hover:text-primary hover:bg-white/5 transition-colors"
-                  title="New project"
-                >
-                  <FolderPlus className="w-3 h-3" />
-                </button>
-                <button
-                  onClick={() => onCreateSession()}
-                  className="w-5 h-5 flex items-center justify-center rounded-md text-zinc-500 hover:text-primary hover:bg-white/5 transition-colors"
-                  title="New chat"
-                >
-                  <Plus className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-
-            {loading && (
-              <p className="px-3 py-4 text-[11px] text-zinc-600 text-center">Loading…</p>
-            )}
-
-            {!loading && ungrouped.length === 0 && projects.length === 0 && (
-              <div className="px-3 py-8 text-center">
-                <MessageCircle className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
-                <p className="text-[11px] text-zinc-600">No chats yet</p>
-                <button
-                  onClick={() => onCreateSession()}
-                  className="mt-2 text-[11px] text-primary hover:underline"
-                >
-                  Start a new chat
-                </button>
-              </div>
-            )}
-
-            <div className={cn(
-              "space-y-0.5 rounded-lg transition-colors",
-              dragOverTarget === "__ungrouped__" && "bg-primary/5"
-            )}>
-              {ungrouped.map((session) => (
-                <SessionRow
-                  key={session.id}
-                  session={session}
-                  isActive={activeSessionId === session.id}
-                  onSelect={() => onSelectSession(session.id)}
-                  onDelete={() => onDeleteSession(session.id)}
-                  onRename={(title) => onRenameSession(session.id, title)}
-                />
-              ))}
-            </div>
-          </div>
         </div>
       </ScrollArea>
     </div>

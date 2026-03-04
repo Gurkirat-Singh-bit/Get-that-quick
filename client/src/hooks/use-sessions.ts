@@ -240,20 +240,24 @@ Your question text here?
     []
   );
 
-  /** Auto-name a session after initial messages by asking the LLM. */
+  /**
+   * Derive a short title from the first user message — instant, no LLM call.
+   * Takes up to 7 words from the message and capitalises the first letter.
+   */
   const autoNameSession = useCallback(
     async (sessionId: string, messages: Message[]) => {
       try {
-        const userMsgs = messages.filter((m) => m.role === "user").map((m) => m.content).join("\n");
-        const title = await api.generate({
-          systemPrompt: "Generate a short, concise title (max 6 words) for a chat conversation based on the user's messages below. Reply with ONLY the title text, no quotes, no explanation.",
-          messages: [{ role: "user", content: userMsgs }],
-          temperature: 0.3,
-          maxTokens: 30,
-        });
-
-        const clean = title.replace(/^["']|["']$/g, "").trim();
-        if (clean && clean.length > 0 && clean.length < 80) {
+        const firstUser = messages.find((m) => m.role === "user");
+        if (!firstUser) return;
+        // Strip markdown, newlines, extra whitespace then take first 7 words
+        const stripped = firstUser.content
+          .replace(/[*_`#>\[\]]/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+        const words = stripped.split(" ").slice(0, 7);
+        const title = words.join(" ") + (stripped.split(" ").length > 7 ? "…" : "");
+        const clean = title.charAt(0).toUpperCase() + title.slice(1);
+        if (clean.length > 0) {
           await api.updateSession(sessionId, { title: clean } as Partial<Session>);
           setActiveSession((prev) => (prev?.id === sessionId ? { ...prev, title: clean } : prev));
           await refresh();

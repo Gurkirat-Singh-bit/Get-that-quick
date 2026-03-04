@@ -75,6 +75,7 @@ function CopyButton({ text }: { text: string }) {
 
 interface MessageActionsProps {
   content: string;
+  isLast?: boolean;
   onSaveAsTemplate?: (content: string) => void;
   onRegenerate?: () => void;
   onExpand?: () => void;
@@ -82,7 +83,7 @@ interface MessageActionsProps {
   onDelete?: () => void;
 }
 
-function MessageActions({ content, onSaveAsTemplate, onRegenerate, onExpand, onRefine, onDelete }: MessageActionsProps) {
+function MessageActions({ content, isLast, onSaveAsTemplate, onRegenerate, onExpand, onRefine, onDelete }: MessageActionsProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -92,7 +93,7 @@ function MessageActions({ content, onSaveAsTemplate, onRegenerate, onExpand, onR
   };
 
   return (
-    <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+    <div className={`flex items-center gap-1 mt-1 transition-opacity ${isLast ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
       <button
         onClick={handleCopy}
         className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
@@ -408,9 +409,11 @@ export function Message({ message, onSaveAsTemplate, onRegenerate, onExpand, onR
           </div>
         ) : (
           <div className="flex items-start gap-2">
-            <p className="flex-1 text-[15px] text-zinc-800 leading-relaxed">
-              {message.content}
-            </p>
+            <div className="flex-1 text-[15px] text-zinc-800 leading-relaxed prose prose-sm max-w-none prose-p:my-1 prose-strong:font-semibold prose-strong:text-zinc-800 prose-em:text-zinc-700 prose-code:bg-zinc-200/60 prose-code:text-zinc-700 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[13px] prose-code:font-mono">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {message.content}
+              </ReactMarkdown>
+            </div>
             <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">
               {onEdit && (
                 <button
@@ -458,6 +461,7 @@ export function Message({ message, onSaveAsTemplate, onRegenerate, onExpand, onR
       </ReactMarkdown>
       <MessageActions
         content={visible}
+        isLast={isLastAssistant}
         onSaveAsTemplate={onSaveAsTemplate}
         onRegenerate={isLastAssistant ? onRegenerate : undefined}
         onExpand={isLastAssistant ? onExpand : undefined}

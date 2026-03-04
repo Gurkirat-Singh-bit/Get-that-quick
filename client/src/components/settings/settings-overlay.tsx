@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { accentPresets, getAccent, setAccent } from "@/lib/accent";
 import type { Settings as SettingsType, AIProviderConfig, VoskModelInfo } from "@shared/types";
 import * as api from "@/api/client";
+import { GtqIcon } from "@/components/brand/gtq-icon";
 
 /** Check if a hex color is perceptually light. */
 function isLight(hex: string): boolean {
@@ -971,9 +972,12 @@ function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType
 function AboutSettings() {
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-bold text-white mb-1">GetThatQuick</h3>
-        <p className="text-xs text-zinc-500">Self-hosted prompt workbench</p>
+      <div className="flex items-center gap-3">
+        <GtqIcon size={36} variant="light" />
+        <div>
+          <h3 className="text-lg font-bold text-white mb-0.5">GetThatQuick</h3>
+          <p className="text-xs text-zinc-500">Self-hosted prompt workbench</p>
+        </div>
       </div>
       <div className="bg-background-dark rounded-lg p-4 space-y-2 border border-shell-border">
         <div className="flex justify-between text-xs">

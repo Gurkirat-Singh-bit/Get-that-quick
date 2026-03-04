@@ -14,7 +14,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowUp, Mic, MicOff, Paperclip, ListChecks, FileText, X, Check, Send, Square } from "lucide-react";
+import { ArrowUp, Mic, MicOff, Paperclip, ListChecks, FileText, X, Check, Send, Square, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AttachedDocument } from "@shared/types";
 import type { PlanQuestion } from "@/components/chat/message";
@@ -80,6 +80,7 @@ export function ChatInput({
   // ── Voice state ──────────────────────────────────────────────────────
   const [listening, setListening] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [voiceConnecting, setVoiceConnecting] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -90,6 +91,8 @@ export function ChatInput({
   const baselineRef = useRef("");
   const accumulatedRef = useRef("");
   const stoppingRef = useRef(false);
+  /** Set to true once the server sends `{ type: "ready" }` — audio is only sent after then. */
+  const serverReadyRef = useRef(false);
   valueRef.current = value;
 
   /** Auto-resize textarea to content (max 5 lines). */
@@ -185,7 +188,9 @@ export function ChatInput({
   // ── Start listening ─────────────────────────────────────────────────
   const startListening = useCallback(async () => {
     setVoiceError(null);
+    setVoiceConnecting(true);
     stoppingRef.current = false;
+    serverReadyRef.current = false;
     baselineRef.current = valueRef.current;
     accumulatedRef.current = "";
 
@@ -207,6 +212,7 @@ export function ChatInput({
       } else {
         setVoiceError(`Mic error: ${err.message}`);
       }
+      setVoiceConnecting(false);
       return;
     }
     streamRef.current = stream;
@@ -218,6 +224,13 @@ export function ChatInput({
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data as string);
+        if (msg.type === "ready") {
+          // Model finished loading on the server — now start accepting audio
+          serverReadyRef.current = true;
+          setListening(true);
+          setVoiceConnecting(false);
+          return;
+        }
         if (msg.type === "error") {
           setVoiceError(msg.message);
           stopListening();
@@ -242,12 +255,14 @@ export function ChatInput({
       }
       cleanupAudio();
       setListening(false);
+      setVoiceConnecting(false);
     };
 
     ws.onclose = () => {
       if (!stoppingRef.current) {
         cleanupAudio();
         setListening(false);
+        setVoiceConnecting(false);
       }
     };
 
@@ -262,7 +277,7 @@ export function ChatInput({
       processorRef.current = processor;
 
       processor.onaudioprocess = (e) => {
-        if (ws.readyState !== WebSocket.OPEN) return;
+        if (ws.readyState !== WebSocket.OPEN || !serverReadyRef.current) return;
         const float32 = e.inputBuffer.getChannelData(0);
         const int16 = new Int16Array(float32.length);
         for (let i = 0; i < float32.length; i++) {
@@ -274,7 +289,7 @@ export function ChatInput({
 
       source.connect(processor);
       processor.connect(audioCtx.destination);
-      setListening(true);
+      // Stay in voiceConnecting (amber spinner) until server sends { type: "ready" }
     };
   }, [cleanupAudio]);
 
@@ -283,6 +298,7 @@ export function ChatInput({
     cleanupAudio();
     cleanupWs();
     setListening(false);
+    setVoiceConnecting(false);
   }, [cleanupAudio, cleanupWs]);
 
   const toggleVoice = useCallback(() => {
@@ -359,7 +375,7 @@ export function ChatInput({
             {documents.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-lg bg-white border border-[#E2E4E9] text-xs text-zinc-600 group"
+                className="flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-lg bg-white border border-[#E2E4E9] text-xs text-zinc-800 group"
               >
                 <FileText className="w-3 h-3 text-zinc-400 shrink-0" />
                 <span className="truncate max-w-30">{doc.name}</span>
@@ -432,7 +448,7 @@ export function ChatInput({
                               "w-full text-left px-3 py-2 rounded-lg text-sm transition-all border",
                               isSelected
                                 ? "border-primary/40 bg-primary/10 text-primary"
-                                : "border-[#E2E4E9] bg-zinc-50 text-zinc-600 hover:border-primary/30 hover:bg-primary/5"
+                                : "border-[#E2E4E9] bg-zinc-50 text-zinc-800 hover:border-primary/30 hover:bg-primary/5"
                             )}
                           >
                             <div className="flex items-center gap-2">
@@ -514,7 +530,7 @@ export function ChatInput({
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
               title="Attach document"
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-800 hover:text-zinc-800 hover:bg-zinc-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Paperclip className="w-4 h-4" />
             </button>
@@ -567,7 +583,7 @@ export function ChatInput({
                 "w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed",
                 planMode
                   ? "bg-primary/10 text-primary"
-                  : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
+                  : "text-zinc-800 hover:text-zinc-800 hover:bg-zinc-100"
               )}
             >
               <ListChecks className="w-4 h-4" />
@@ -576,16 +592,24 @@ export function ChatInput({
             {/* Voice dictation */}
             <button
               onClick={toggleVoice}
-              disabled={disabled}
-              aria-label={listening ? "Stop voice input" : "Start voice input"}
+              disabled={disabled || voiceConnecting}
+              aria-label={voiceConnecting ? "Loading voice model…" : listening ? "Stop voice input" : "Start voice input"}
               className={cn(
                 "w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed",
-                listening
-                  ? "bg-red-500 text-white animate-pulse"
-                  : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"
+                voiceConnecting
+                  ? "bg-amber-500/20 text-amber-400"
+                  : listening
+                    ? "bg-red-500 text-white animate-pulse"
+                    : "text-zinc-800 hover:text-zinc-800 hover:bg-zinc-100"
               )}
             >
-              {listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              {voiceConnecting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : listening ? (
+                <MicOff className="w-4 h-4" />
+              ) : (
+                <Mic className="w-4 h-4" />
+              )}
             </button>
 
             {/* Send / Stop —
@@ -612,10 +636,7 @@ export function ChatInput({
           </div>
         </div>
 
-        {/* Voice status indicators */}
-        {listening && (
-          <p className="text-center text-xs text-primary mt-2 animate-pulse">Listening… (local Vosk STT)</p>
-        )}
+        {/* Voice status — errors only; loading/listening state is communicated by the mic button itself */}
         {voiceError && (
           <p className="text-center text-xs text-red-500 mt-2">{voiceError}</p>
         )}

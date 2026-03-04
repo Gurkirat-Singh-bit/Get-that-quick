@@ -64,6 +64,8 @@ export function handleSTTOpen(ws: ServerWebSocket<STTSessionData>): void {
     vosk.loadModel();
     const recognizer = vosk.createRecognizer();
     ws.data = { recognizer, lastActivity: Date.now() };
+    // Notify the client that the model is loaded and we are ready to accept audio
+    ws.send(JSON.stringify({ type: "ready" }));
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to initialize STT";
     sendError(ws, message);

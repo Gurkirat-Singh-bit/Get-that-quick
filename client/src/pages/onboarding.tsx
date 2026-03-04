@@ -29,7 +29,9 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import * as api from "@/api/client";
+import { GtqIcon } from "@/components/brand/gtq-icon";
 import type { VoskModelInfo, AIProviderConfig } from "@shared/types";
 
 type Step = "welcome" | "vosk" | "llm" | "keys" | "done";
@@ -61,8 +63,8 @@ interface OnboardingState {
 function WelcomeStep() {
   return (
     <div className="flex flex-col items-center text-center max-w-md mx-auto">
-      <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-6">
-        <Zap className="w-10 h-10 text-primary" />
+      <div className="w-20 h-20 flex items-center justify-center mb-6">
+        <GtqIcon size={72} variant="light" />
       </div>
       <h1 className="text-2xl font-bold text-white mb-3">Welcome to GetThatQuick</h1>
       <p className="text-sm text-slate-400 leading-relaxed mb-8">
@@ -101,6 +103,9 @@ function VoskStep({ selectedModel, onSelectModel, onModelDownloaded }: VoskStepP
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadSpeed, setDownloadSpeed] = useState<number | undefined>();
+  const [downloadEta, setDownloadEta] = useState<number | undefined>();
+  const [downloadStatus, setDownloadStatus] = useState<string>("downloading");
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -120,10 +125,16 @@ function VoskStep({ selectedModel, onSelectModel, onModelDownloaded }: VoskStepP
   const handleDownload = async (id: string) => {
     setDownloading(id);
     setDownloadProgress(0);
+    setDownloadSpeed(undefined);
+    setDownloadEta(undefined);
+    setDownloadStatus("downloading");
     setDownloadError(null);
     try {
       await api.downloadModel(id, (info) => {
         setDownloadProgress(info.percent);
+        setDownloadSpeed(info.speed);
+        setDownloadEta(info.eta);
+        setDownloadStatus(info.status);
       });
       // Refresh model list to show downloaded status
       const updated = await api.listModels();
@@ -139,6 +150,18 @@ function VoskStep({ selectedModel, onSelectModel, onModelDownloaded }: VoskStepP
     }
   };
 
+  const formatSpeed = (bytesPerSec?: number) => {
+    if (!bytesPerSec) return "";
+    const mb = bytesPerSec / 1024 / 1024;
+    return mb >= 1 ? `${mb.toFixed(1)} MB/s` : `${(bytesPerSec / 1024).toFixed(0)} KB/s`;
+  };
+
+  const formatEta = (seconds?: number) => {
+    if (!seconds || seconds <= 0) return "";
+    if (seconds < 60) return `${Math.ceil(seconds)}s left`;
+    return `${Math.floor(seconds / 60)}m ${Math.ceil(seconds % 60)}s left`;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -149,16 +172,18 @@ function VoskStep({ selectedModel, onSelectModel, onModelDownloaded }: VoskStepP
   }
 
   return (
-    <div className="max-w-lg mx-auto">
-      <div className="mb-6">
+    <div className="max-w-lg mx-auto w-full">
+      <div className="mb-5">
         <h2 className="text-lg font-bold text-white mb-2">Voice Model (Vosk)</h2>
         <p className="text-sm text-slate-400">
           Select a speech-to-text model for voice input. You can change this later in settings.
         </p>
       </div>
 
-      <div className="space-y-2 mb-6">
-        {models.map((model) => (
+      {/* Scrollable model list with a fixed max-height so the step never overflows */}
+      <ScrollArea className="max-h-[50vh] pr-2">
+        <div className="space-y-2 mb-2">
+          {models.map((model) => (
           <button
             key={model.id}
             onClick={() => onSelectModel(model.id)}
@@ -177,8 +202,8 @@ function VoskStep({ selectedModel, onSelectModel, onModelDownloaded }: VoskStepP
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-white">{model.name}</span>
-                <span className="text-[10px] text-slate-600">{model.size}</span>
+                <span className="text-xs font-semibold text-white truncate">{model.name}</span>
+                <span className="text-[10px] text-slate-600 shrink-0">{model.size}</span>
                 {model.default && (
                   <span className="text-[9px] font-medium bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
                     Recommended
@@ -188,48 +213,61 @@ function VoskStep({ selectedModel, onSelectModel, onModelDownloaded }: VoskStepP
               <p className="text-[11px] text-slate-500 mt-0.5">
                 {model.accuracy} · Min {model.minRAM} RAM
               </p>
-              <div className="flex items-center gap-2 mt-1.5">
+              <div className="mt-1.5">
                 {model.downloaded ? (
-                  <span className="flex items-center gap-1 text-[10px] text-emerald-400">
-                    <CheckCircle2 className="w-3 h-3" /> Downloaded
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+                      <CheckCircle2 className="w-3 h-3" /> Downloaded
+                    </span>
+                    {model.active && (
+                      <span className="text-[10px] text-emerald-400 font-medium">· Active</span>
+                    )}
+                  </div>
                 ) : downloading === model.id ? (
-                  <div className="flex items-center gap-2 w-full">
-                    <div className="flex-1 h-1.5 bg-[#333] rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary rounded-full transition-all duration-300"
-                        style={{ width: `${downloadProgress}%` }}
-                      />
+                  <div className="w-full space-y-1">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 bg-[#333] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full transition-all duration-300"
+                          style={{ width: `${downloadProgress}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-primary shrink-0 tabular-nums">{Math.round(downloadProgress)}%</span>
                     </div>
-                    <span className="text-[10px] text-primary shrink-0">{downloadProgress}%</span>
+                    <div className="flex items-center gap-2 text-[9px] text-slate-500">
+                      {downloadStatus === "extracting" ? (
+                        <span className="flex items-center gap-1">
+                          <Loader2 className="w-2.5 h-2.5 animate-spin" /> Extracting model…
+                        </span>
+                      ) : (
+                        <>
+                          {downloadSpeed !== undefined && <span>{formatSpeed(downloadSpeed)}</span>}
+                          {downloadEta !== undefined && downloadEta > 0 && <span>· {formatEta(downloadEta)}</span>}
+                        </>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDownload(model.id); }}
-                    className="flex items-center gap-1 text-[10px] text-primary hover:underline"
+                    className="flex items-center gap-1.5 text-[10px] text-primary hover:text-primary/80 transition-colors font-medium"
                   >
                     <Download className="w-3 h-3" /> Download
                   </button>
-                )}
-                {model.active && (
-                  <span className="text-[10px] text-emerald-400 font-medium">Active</span>
                 )}
               </div>
             </div>
           </button>
         ))}
-      </div>
+        </div>
+      </ScrollArea>
 
       {downloadError && (
-        <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg mb-4">
+        <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg mt-3">
           <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
           <p className="text-xs text-red-400">{downloadError}</p>
         </div>
       )}
-
-      <p className="text-[11px] text-slate-600">
-        Voice input is optional. You can skip this step and download a model later in Settings.
-      </p>
     </div>
   );
 }
@@ -600,6 +638,10 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     if (!isFirst) setCurrentStep(steps[currentIndex - 1].id);
   };
 
+  /** Steps that can be skipped (non-essential setup). */
+  const skippableSteps: Step[] = ["vosk", "keys"];
+  const canSkip = skippableSteps.includes(currentStep);
+
   const renderStep = () => {
     switch (currentStep) {
       case "welcome":
@@ -668,8 +710,10 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex items-center justify-center px-8 overflow-y-auto">
-        {renderStep()}
+      <div className="flex-1 overflow-y-auto">
+        <div className="min-h-full flex flex-col items-center justify-center px-8 py-8">
+          {renderStep()}
+        </div>
       </div>
 
       {/* Navigation */}
@@ -688,25 +732,36 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           Back
         </button>
 
-        <button
-          onClick={goNext}
-          disabled={saving}
-          className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-primary text-white text-xs font-semibold hover:brightness-110 transition-all disabled:opacity-50"
-        >
-          {saving ? (
-            <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Saving...
-            </>
-          ) : isLast ? (
-            "Get Started"
-          ) : (
-            <>
-              Continue
-              <ChevronRight className="w-3.5 h-3.5" />
-            </>
+        <div className="flex items-center gap-3">
+          {canSkip && (
+            <button
+              onClick={goNext}
+              className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              Skip
+            </button>
           )}
-        </button>
+
+          <button
+            onClick={goNext}
+            disabled={saving}
+            className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-primary text-white text-xs font-semibold hover:brightness-110 transition-all disabled:opacity-50"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Saving...
+              </>
+            ) : isLast ? (
+              "Get Started"
+            ) : (
+              <>
+                Continue
+                <ChevronRight className="w-3.5 h-3.5" />
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

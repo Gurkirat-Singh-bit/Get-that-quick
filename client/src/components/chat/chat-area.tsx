@@ -13,11 +13,12 @@
  */
 
 import { useRef, useEffect, useMemo, useState, useCallback } from "react";
-import { Sparkles, AlertTriangle, LayoutTemplate } from "lucide-react";
+import { AlertTriangle, LayoutTemplate } from "lucide-react";
 import { Message, parsePlanQuestions } from "@/components/chat/message";
 import type { PlanQuestion } from "@/components/chat/message";
 import { ChatInput } from "@/components/chat/chat-input";
 import type { Session, Settings, AttachedDocument } from "@shared/types";
+import { GtqIcon } from "@/components/brand/gtq-icon";
 
 /** Props accepted by {@link ChatArea}. */
 interface ChatAreaProps {
@@ -186,18 +187,16 @@ export function ChatArea({
       )}
 
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-[#E2E4E9] shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <h1 className="text-base font-bold tracking-tight text-zinc-800 truncate">
-            {session?.title ?? "New Chat"}
-          </h1>
-          {activeTemplateName && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium shrink-0">
-              <LayoutTemplate className="w-3 h-3" />
-              {activeTemplateName}
-            </span>
-          )}
-        </div>
+      <div className="flex items-center gap-2 px-6 py-3 border-b border-[#E2E4E9] shrink-0 min-w-0 overflow-hidden">
+        <h1 className="text-base font-bold tracking-tight text-zinc-800 truncate min-w-0 flex-1">
+          {session?.title ?? "New Chat"}
+        </h1>
+        {activeTemplateName && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium shrink-0">
+            <LayoutTemplate className="w-3 h-3" />
+            {activeTemplateName}
+          </span>
+        )}
       </div>
 
       {/* Messages — scrollable middle */}
@@ -209,8 +208,8 @@ export function ChatArea({
         {!session || session.messages.length === 0 ? (
           /* Empty state */
           <div className="flex flex-col items-center justify-center h-full text-center px-6">
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-              <Sparkles className="w-7 h-7 text-primary" />
+            <div className="w-20 h-20 rounded-2xl bg-zinc-100 flex items-center justify-center mb-5 shadow-sm">
+              <GtqIcon size={48} variant="dark" />
             </div>
             <h2 className="text-lg font-bold text-zinc-800 mb-1">GetThatQuick</h2>
             <p className="text-sm text-zinc-500 max-w-sm mb-6">

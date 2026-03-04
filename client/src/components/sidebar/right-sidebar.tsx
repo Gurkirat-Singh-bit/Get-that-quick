@@ -191,8 +191,8 @@ function CategoryFolder({
               ) : (
                 <FileCode2 className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
               )}
-              <div className="flex-1 min-w-0">
-                <span className="text-xs text-zinc-300 group-hover:text-white truncate block">{t.title}</span>
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <span className="text-[11px] text-zinc-300 group-hover:text-white truncate block leading-snug">{t.title}</span>
                 {t.description && (
                   <span className="text-[10px] text-zinc-600 truncate block">{t.description}</span>
                 )}
@@ -244,6 +244,7 @@ export function RightSidebar({
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
+  const [newContent, setNewContent] = useState("");
   const [newCategory, setNewCategory] = useState("general");
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [customCategory, setCustomCategory] = useState("");
@@ -276,6 +277,7 @@ export function RightSidebar({
   const resetCreateForm = () => {
     setNewName("");
     setNewDescription("");
+    setNewContent("");
     setNewCategory("general");
     setCustomCategory("");
     setShowCategoryPicker(false);
@@ -285,13 +287,13 @@ export function RightSidebar({
   const handleCreateTemplate = async () => {
     if (!newName.trim()) return;
     const category = customCategory.trim() || newCategory;
-    await onCreateTemplate(
+    const tmpl = await onCreateTemplate(
       newName.trim(),
-      "New custom template prompt — edit to customize",
+      newContent.trim(),
       newDescription.trim() || undefined,
-      category
+      category,
     );
-    // Auto-expand the created category folder
+    // Auto-expand the created category folder for immediate visibility
     if (category) {
       const parts = category.split("/");
       const newExpanded = new Set(expandedFolders);
@@ -301,6 +303,8 @@ export function RightSidebar({
       setExpandedFolders(newExpanded);
     }
     resetCreateForm();
+    // Open the template editor so the user can write the prompt immediately
+    onEditTemplate?.(tmpl.id);
   };
 
   const handleCreateInCategory = (category: string) => {
@@ -321,14 +325,14 @@ export function RightSidebar({
   // Filter templates by search
   const filteredCommunity = community.filter(
     (t) => !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.description.toLowerCase().includes(searchQuery.toLowerCase())
+      (t.category || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (t.description || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredLocal = local.filter(
     (t) => !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.description.toLowerCase().includes(searchQuery.toLowerCase())
+      (t.category || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (t.description || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Build category trees
@@ -353,7 +357,7 @@ export function RightSidebar({
   }, [searchQuery, communityTree, localTree]);
 
   return (
-    <div className="w-72 h-full flex flex-col bg-[#0E0E10] text-zinc-300 border-l border-[#1A1A1E]">
+    <div className="w-full h-full flex flex-col bg-[#0E0E10] text-zinc-300 border-l border-[#1A1A1E]">
       {/* Header */}
       <div className="px-4 pt-4 pb-1 shrink-0">
         <div className="flex items-center gap-2 mb-3">
@@ -393,7 +397,7 @@ export function RightSidebar({
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="px-2 pb-4">
           {/* Community Templates */}
           {showCommunity && (
@@ -451,8 +455,8 @@ export function RightSidebar({
                       className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing"
                     >
                       <Globe className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <span className="text-xs text-zinc-300 group-hover:text-white truncate block">{t.title}</span>
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <span className="text-[11px] text-zinc-300 group-hover:text-white truncate block leading-snug">{t.title}</span>
                         {t.description && (
                           <span className="text-[10px] text-zinc-600 truncate block">{t.description}</span>
                         )}
@@ -516,6 +520,15 @@ export function RightSidebar({
                     onChange={(e) => setNewDescription(e.target.value)}
                     placeholder="Short description"
                     className="w-full bg-[#141416] border border-[#1A1A1E] rounded-md px-2.5 py-1.5 text-xs text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/30"
+                  />
+
+                  {/* Prompt content */}
+                  <textarea
+                    value={newContent}
+                    onChange={(e) => setNewContent(e.target.value)}
+                    placeholder="Prompt content... (you can also edit this after creating)"
+                    rows={5}
+                    className="w-full bg-[#141416] border border-[#1A1A1E] rounded-md px-2.5 py-1.5 text-xs text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/30 resize-none font-mono"
                   />
 
                   {/* Category selector with hierarchy */}
@@ -633,8 +646,8 @@ export function RightSidebar({
                       className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing"
                     >
                       <FileCode2 className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <span className="text-xs text-zinc-300 group-hover:text-white truncate block">{t.title}</span>
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <span className="text-[11px] text-zinc-300 group-hover:text-white truncate block leading-snug">{t.title}</span>
                         {t.description && (
                           <span className="text-[10px] text-zinc-600 truncate block">{t.description}</span>
                         )}

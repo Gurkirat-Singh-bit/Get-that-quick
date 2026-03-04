@@ -218,6 +218,11 @@ export interface STTError {
   message: string;
 }
 
+/** Ready event — sent when the STT model has loaded and is accepting audio. */
+export interface STTReady {
+  type: "ready";
+}
+
 // ── Documents ─────────────────────────────────────────────────────────────
 
 /** An attached document included as context in a chat. */

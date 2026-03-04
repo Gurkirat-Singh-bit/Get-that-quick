@@ -12,7 +12,7 @@
  * @updated 2026-03-03
  */
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { IconRail } from "@/components/layout/icon-rail";
 import { RightIconRail } from "@/components/layout/right-icon-rail";
@@ -32,6 +32,32 @@ import type { Project, AttachedDocument } from "@shared/types";
 export interface PanelState {
   left: boolean;
   right: boolean;
+}
+
+/** Minimum sidebar width in pixels. */
+const MIN_SIDEBAR_WIDTH = 200;
+/** Maximum sidebar width in pixels. */
+const MAX_SIDEBAR_WIDTH = 520;
+/** Default sidebar width in pixels (equivalent to Tailwind w-72). */
+const DEFAULT_SIDEBAR_WIDTH = 288;
+
+/**
+ * Slim drag handle rendered between a sidebar and the main content.
+ * Emits a mousedown event when the user starts dragging.
+ */
+function ResizeHandle({ onMouseDown }: { onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void }) {
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize sidebar"
+      className="w-1 shrink-0 cursor-col-resize group relative z-10"
+    >
+      {/* Wider invisible hit area + subtle hover indicator */}
+      <div className="absolute inset-y-0 -left-1 -right-1 group-hover:bg-primary/20 active:bg-primary/30 transition-colors rounded-sm" />
+    </div>
+  );
 }
 
 /**
@@ -69,6 +95,34 @@ export function Dashboard() {
   const [nextColorIdx, setNextColorIdx] = useState(0);
   const [documents, setDocuments] = useState<AttachedDocument[]>([]);
 
+  /**
+   * Which primary view is active in the left sidebar.
+   * `"chats"` shows a flat chronological session list.
+   * `"projects"` shows the project tree with grouped sessions.
+   */
+  const [leftMode, setLeftMode] = useState<"chats" | "projects">("chats");
+
+  /** Current pixel width of the left sidebar (when open). */
+  const [leftSidebarWidth, setLeftSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+  /** Current pixel width of the right sidebar (when open). */
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+  /**
+   * Which sidebar is actively being resized via drag.
+   * `null` when no drag is in progress.
+   */
+  const [resizing, setResizing] = useState<"left" | "right" | null>(null);
+
+  /**
+   * Mutable drag data shared between the mousedown starter and the
+   * mousemove/mouseup handlers registered on `document`.
+   * Using a ref avoids stale-closure issues inside the effect.
+   */
+  const resizeDataRef = useRef<{
+    side: "left" | "right";
+    startX: number;
+    startWidth: number;
+  } | null>(null);
+
   const sessionHook = useSessions();
   const templateHook = useTemplates();
   const settingsHook = useSettings();
@@ -88,6 +142,64 @@ export function Dashboard() {
     saveProjects(projects);
   }, [projects]);
 
+  /**
+   * Global mouse-move / mouse-up listeners that drive sidebar resizing.
+   * Registered once; reads drag state from `resizeDataRef` to avoid stale closures.
+   */
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const data = resizeDataRef.current;
+      if (!data) return;
+      const delta =
+        data.side === "left"
+          ? e.clientX - data.startX
+          : data.startX - e.clientX;
+      const newWidth = Math.min(
+        MAX_SIDEBAR_WIDTH,
+        Math.max(MIN_SIDEBAR_WIDTH, data.startWidth + delta),
+      );
+      if (data.side === "left") setLeftSidebarWidth(newWidth);
+      else setRightSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      if (resizeDataRef.current) {
+        resizeDataRef.current = null;
+        setResizing(null);
+        // Restore default cursor & text-selection
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      }
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []); // stable — only registered once
+
+  /**
+   * Begin resizing a sidebar.
+   * Captures the starting mouse position and sidebar width for delta math.
+   */
+  const startResize = useCallback(
+    (side: "left" | "right", e: React.MouseEvent) => {
+      e.preventDefault();
+      resizeDataRef.current = {
+        side,
+        startX: e.clientX,
+        startWidth: side === "left" ? leftSidebarWidth : rightSidebarWidth,
+      };
+      setResizing(side);
+      // Suppress cursor flicker and accidental text selection during drag
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [leftSidebarWidth, rightSidebarWidth],
+  );
+
   /** Resolve the active template name from the session's templateId. */
   const activeTemplateName = useMemo(() => {
     const tid = sessionHook.activeSession?.templateId;
@@ -100,6 +212,35 @@ export function Dashboard() {
   const togglePanel = useCallback((side: "left" | "right") => {
     setPanels((prev) => ({ ...prev, [side]: !prev[side] }));
   }, []);
+
+  /**
+   * Toggle the chats view in the left sidebar.
+   * Clicking the same mode again closes the panel;
+   * clicking a different mode switches the view and opens the panel.
+   */
+  const handleToggleChats = useCallback(() => {
+    setConfigPanelOpen(false);
+    if (panels.left && leftMode === "chats") {
+      setPanels((prev) => ({ ...prev, left: false }));
+    } else {
+      setLeftMode("chats");
+      setPanels((prev) => ({ ...prev, left: true }));
+    }
+  }, [panels.left, leftMode]);
+
+  /**
+   * Toggle the projects view in the left sidebar.
+   * Same open/close/switch logic as {@link handleToggleChats}.
+   */
+  const handleToggleProjects = useCallback(() => {
+    setConfigPanelOpen(false);
+    if (panels.left && leftMode === "projects") {
+      setPanels((prev) => ({ ...prev, left: false }));
+    } else {
+      setLeftMode("projects");
+      setPanels((prev) => ({ ...prev, left: true }));
+    }
+  }, [panels.left, leftMode]);
 
   /** Open right sidebar with a specific filter. */
   const openTemplateFilter = useCallback((filter: TemplateFilter) => {
@@ -148,17 +289,21 @@ export function Dashboard() {
     sessionHook.moveSession(sessionId, projectId);
   }, [sessionHook]);
 
+  /** Whether the left panel transition animation should run (disabled while dragging). */
+  const leftTransition = resizing !== "left";
+  /** Whether the right panel transition animation should run (disabled while dragging). */
+  const rightTransition = resizing !== "right";
+
   return (
     <TooltipProvider>
       <div className="h-screen w-screen bg-background-dark flex overflow-hidden">
-        {/* Left icon rail — chats, new chat, settings */}
+        {/* Left icon rail — view toggles and settings */}
         <IconRail
-          chatsOpen={panels.left}
-          projectsOpen={panels.left}
-          onToggleChats={() => { setConfigPanelOpen(false); togglePanel("left"); }}
-          onToggleProjects={() => { setConfigPanelOpen(false); togglePanel("left"); }}
+          chatsOpen={panels.left && leftMode === "chats" && !configPanelOpen}
+          projectsOpen={panels.left && leftMode === "projects" && !configPanelOpen}
+          onToggleChats={handleToggleChats}
+          onToggleProjects={handleToggleProjects}
           onSettingsClick={() => setSettingsOpen(true)}
-          onNewChat={async () => { await sessionHook.createSession(); }}
           configOpen={configPanelOpen}
           onToggleConfig={() => {
             if (configPanelOpen) {
@@ -170,13 +315,15 @@ export function Dashboard() {
           }}
         />
 
-        {/* Left sidebar — sessions / recent chats */}
+        {/* Left sidebar — sessions / projects / config (resizable) */}
         <div
-          className={`transition-all duration-300 ease-in-out overflow-hidden ${
-            panels.left || configPanelOpen ? "w-72" : "w-0"
-          }`}
+          className="overflow-hidden shrink-0"
+          style={{
+            width: (panels.left || configPanelOpen) ? leftSidebarWidth : 0,
+            transition: leftTransition ? "width 300ms ease-in-out" : "none",
+          }}
         >
-          <div className="w-72 h-full">
+          <div className="h-full" style={{ width: leftSidebarWidth }}>
             {configPanelOpen ? (
               <ConfigPanel
                 settings={settingsHook.settings}
@@ -187,7 +334,6 @@ export function Dashboard() {
                 sessions={sessionHook.sessions}
                 activeSessionId={sessionHook.activeSession?.id ?? null}
                 onSelectSession={sessionHook.selectSession}
-                onCreateSession={async (title) => { await sessionHook.createSession(title); }}
                 onDeleteSession={sessionHook.deleteSession}
                 onRenameSession={sessionHook.renameSession}
                 loading={sessionHook.loading}
@@ -196,10 +342,17 @@ export function Dashboard() {
                 onDeleteProject={handleDeleteProject}
                 onRenameProject={handleRenameProject}
                 onMoveSession={handleMoveSession}
+                viewMode={leftMode}
+                onNewChat={async () => { await sessionHook.createSession(); }}
               />
             )}
           </div>
         </div>
+
+        {/* Left resize handle — only visible when the left sidebar is open */}
+        {(panels.left || configPanelOpen) && (
+          <ResizeHandle onMouseDown={(e) => startResize("left", e)} />
+        )}
 
         {/* Main chat area — light themed center */}
         <main className="flex-1 bg-[#F8F9FB] m-2 rounded-2xl flex overflow-hidden min-w-0 border border-[#E2E4E9]">
@@ -230,13 +383,20 @@ export function Dashboard() {
           />
         </main>
 
-        {/* Right sidebar — templates */}
+        {/* Right resize handle — only visible when the right sidebar is open */}
+        {panels.right && (
+          <ResizeHandle onMouseDown={(e) => startResize("right", e)} />
+        )}
+
+        {/* Right sidebar — templates (resizable) */}
         <div
-          className={`transition-all duration-300 ease-in-out overflow-hidden ${
-            panels.right ? "w-72" : "w-0"
-          }`}
+          className="overflow-hidden shrink-0"
+          style={{
+            width: panels.right ? rightSidebarWidth : 0,
+            transition: rightTransition ? "width 300ms ease-in-out" : "none",
+          }}
         >
-          <div className="w-72 h-full">
+          <div className="h-full" style={{ width: rightSidebarWidth }}>
             <RightSidebar
               community={templateHook.community}
               local={templateHook.local}
@@ -286,4 +446,3 @@ export function Dashboard() {
     </TooltipProvider>
   );
 }
-
