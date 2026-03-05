@@ -1,15 +1,16 @@
 <p align="center">
-  <img src="client/public/vite.svg" width="80" alt="GetThatQuick logo" />
+  <img src="client/public/icon-white.png" width="80" alt="GetThatQuick logo" />
 </p>
 
 <h1 align="center">GetThatQuick</h1>
 
 <p align="center">
-  A self-hosted AI prompt workbench with speech-to-text, templates, and multi-provider LLM support.<br/>
+  Self-hosted AI prompt workbench with local speech-to-text, templates, and multi-provider LLM support.<br/>
   Runs in a single Docker container. Everything stays on your machine.
 </p>
 
 <p align="center">
+  <a href="https://gurkirat-singh-bit.github.io/Get-that-quick/">Documentation</a> &middot;
   <a href="#features">Features</a> &middot;
   <a href="#quick-start">Quick Start</a> &middot;
   <a href="#configuration">Configuration</a> &middot;
@@ -117,14 +118,15 @@ Click the sync button (refresh icon) in the right sidebar's Community section to
 
 ```
 GetThatQuick/
-+-- client/          React + Vite + Tailwind CSS v4 (SPA)
++-- client/          React 19 + Vite + Tailwind CSS v4 (SPA)
 +-- server/          Hono + Bun (REST API + WebSocket STT)
-+-- shared/          TypeScript types shared between client & server
-+-- docs/            PRD, architecture docs, checklist
-+-- test/            Vosk STT test scripts
++-- shared/          TypeScript types & Zod schemas
++-- docs-site/       Docusaurus documentation site
 +-- Dockerfile       Multi-stage build
 +-- docker-compose.yml
 ```
+
+> Full architecture documentation, API reference, and deployment guides are available at the **[docs site](https://gurkirat-singh-bit.github.io/Get-that-quick/)**.
 
 ### Stack
 
@@ -174,9 +176,15 @@ GetThatQuick/
 
 ---
 
-## Screenshots
+## Documentation
 
-> Coming soon
+Full documentation is hosted with Docusaurus:
+
+- **[Getting Started](https://gurkirat-singh-bit.github.io/Get-that-quick/docs/getting-started)** — Installation & setup
+- **[Architecture](https://gurkirat-singh-bit.github.io/Get-that-quick/docs/architecture/overview)** — System design & data flow
+- **[API Reference](https://gurkirat-singh-bit.github.io/Get-that-quick/docs/api/sessions)** — REST & WebSocket endpoints
+- **[Template Format](https://gurkirat-singh-bit.github.io/Get-that-quick/docs/guides/template-format)** — Writing prompt templates
+- **[Docker Deployment](https://gurkirat-singh-bit.github.io/Get-that-quick/docs/guides/docker-deployment)** — Production deployment
 
 ---
 

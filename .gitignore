@@ -6,6 +6,11 @@ node_modules/
 client/dist/
 server/dist/
 
+# Docusaurus
+docs-site/.docusaurus/
+docs-site/build/
+docs-site/node_modules/
+
 # Environment
 .env
 .env.local

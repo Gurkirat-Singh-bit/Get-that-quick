@@ -12,7 +12,7 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
-import { Search, FileCode2, Globe, Plus, Trash2, Sparkles, FolderOpen, LayoutTemplate, Pencil, Tag, ChevronDown, ChevronRight, X, Folder, RefreshCw } from "lucide-react";
+import { Search, FileCode2, Globe, Plus, Trash2, Sparkles, FolderOpen, LayoutGrid, Pencil, Tag, ChevronDown, ChevronRight, X, Folder, RefreshCw } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { TemplateMeta, Template } from "@shared/types";
 import type { TemplateFilter } from "@/components/layout/right-icon-rail";
@@ -39,7 +39,7 @@ const filterLabels: Record<TemplateFilter, string> = {
 };
 
 const filterIcons: Record<TemplateFilter, React.ReactNode> = {
-  all: <LayoutTemplate className="w-3.5 h-3.5" />,
+  all: <LayoutGrid className="w-3.5 h-3.5" />,
   community: <Globe className="w-3.5 h-3.5" />,
   local: <FolderOpen className="w-3.5 h-3.5" />,
 };

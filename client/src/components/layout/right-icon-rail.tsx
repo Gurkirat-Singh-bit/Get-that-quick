@@ -12,7 +12,7 @@
  */
 
 import {
-  LayoutTemplate,
+  LayoutGrid,
   Globe,
   FolderOpen,
   FilePlus2,
@@ -63,11 +63,6 @@ export function RightIconRail({
 
   return (
     <aside className="w-14 flex flex-col items-center py-5 gap-1.5 shrink-0 bg-background-dark">
-      {/* Top icon */}
-      <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2 bg-primary/10">
-        <LayoutTemplate className="w-4 h-4 text-primary" />
-      </div>
-
       {/* All Templates */}
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
@@ -80,7 +75,7 @@ export function RightIconRail({
                 : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
             )}
           >
-            <LayoutTemplate className="w-4.5 h-4.5" />
+            <LayoutGrid className="w-4.5 h-4.5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="left" sideOffset={10}>All Templates</TooltipContent>
