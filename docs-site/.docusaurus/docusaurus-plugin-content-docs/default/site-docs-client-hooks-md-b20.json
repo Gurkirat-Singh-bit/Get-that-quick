@@ -1,0 +1,28 @@
+{
+  "id": "client/hooks",
+  "title": "Hooks",
+  "description": "Custom React hooks live in src/hooks/ and encapsulate all data-fetching, state management, and side-effect logic.",
+  "source": "@site/docs/client/hooks.md",
+  "sourceDirName": "client",
+  "slug": "/client/hooks",
+  "permalink": "/Get-that-quick/docs/client/hooks",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Gurkirat-Singh-bit/Get-that-quick/tree/main/docs-site/docs/client/hooks.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {
+    "sidebar_position": 4,
+    "title": "Hooks"
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Components",
+    "permalink": "/Get-that-quick/docs/client/components"
+  },
+  "next": {
+    "title": "API Client",
+    "permalink": "/Get-that-quick/docs/client/api-client"
+  }
+}

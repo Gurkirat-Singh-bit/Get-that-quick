@@ -1,0 +1,28 @@
+{
+  "id": "guides/template-format",
+  "title": "Template Format",
+  "description": "Templates are .md files with YAML frontmatter and a Markdown body. The body is the system prompt sent to the AI provider.",
+  "source": "@site/docs/guides/template-format.md",
+  "sourceDirName": "guides",
+  "slug": "/guides/template-format",
+  "permalink": "/Get-that-quick/docs/guides/template-format",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Gurkirat-Singh-bit/Get-that-quick/tree/main/docs-site/docs/guides/template-format.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2,
+    "title": "Template Format"
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Docker Deployment",
+    "permalink": "/Get-that-quick/docs/guides/docker-deployment"
+  },
+  "next": {
+    "title": "Deploy to GitHub Pages",
+    "permalink": "/Get-that-quick/docs/guides/github-pages"
+  }
+}

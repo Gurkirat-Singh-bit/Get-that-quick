@@ -1,0 +1,28 @@
+{
+  "id": "api/templates",
+  "title": "Templates API",
+  "description": "REST API reference for template management. Templates can be local (user-created, read-write) or community (synced from GitHub, read-only).",
+  "source": "@site/docs/api/templates.md",
+  "sourceDirName": "api",
+  "slug": "/api/templates",
+  "permalink": "/Get-that-quick/docs/api/templates",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Gurkirat-Singh-bit/Get-that-quick/tree/main/docs-site/docs/api/templates.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2,
+    "title": "Templates API"
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Sessions API",
+    "permalink": "/Get-that-quick/docs/api/sessions"
+  },
+  "next": {
+    "title": "Generate API",
+    "permalink": "/Get-that-quick/docs/api/generate"
+  }
+}

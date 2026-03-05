@@ -1,0 +1,28 @@
+{
+  "id": "architecture/tech-stack",
+  "title": "Tech Stack",
+  "description": "Frontend",
+  "source": "@site/docs/architecture/tech-stack.md",
+  "sourceDirName": "architecture",
+  "slug": "/architecture/tech-stack",
+  "permalink": "/Get-that-quick/docs/architecture/tech-stack",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Gurkirat-Singh-bit/Get-that-quick/tree/main/docs-site/docs/architecture/tech-stack.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2,
+    "title": "Tech Stack"
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "System Overview",
+    "permalink": "/Get-that-quick/docs/architecture/overview"
+  },
+  "next": {
+    "title": "Data Flow",
+    "permalink": "/Get-that-quick/docs/architecture/data-flow"
+  }
+}

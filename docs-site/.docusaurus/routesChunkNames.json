@@ -1,0 +1,134 @@
+{
+  "/Get-that-quick/docs-5dd": {
+    "__comp": "5e95c892",
+    "__context": {
+      "plugin": "aba21aa0"
+    }
+  },
+  "/Get-that-quick/docs-49f": {
+    "__comp": "a7bd4aaa",
+    "__props": "33d0f1a7"
+  },
+  "/Get-that-quick/docs-6a8": {
+    "__comp": "a94703ab"
+  },
+  "/Get-that-quick/docs/-698": {
+    "__comp": "17896441",
+    "content": "0e384e19"
+  },
+  "/Get-that-quick/docs/api/generate-212": {
+    "__comp": "17896441",
+    "content": "f3fd0319"
+  },
+  "/Get-that-quick/docs/api/models-4b6": {
+    "__comp": "17896441",
+    "content": "4e61bb45"
+  },
+  "/Get-that-quick/docs/api/sessions-503": {
+    "__comp": "17896441",
+    "content": "a5c573a6"
+  },
+  "/Get-that-quick/docs/api/settings-ca2": {
+    "__comp": "17896441",
+    "content": "0e591b21"
+  },
+  "/Get-that-quick/docs/api/templates-513": {
+    "__comp": "17896441",
+    "content": "4a21a358"
+  },
+  "/Get-that-quick/docs/api/websocket-stt-117": {
+    "__comp": "17896441",
+    "content": "13037026"
+  },
+  "/Get-that-quick/docs/architecture/data-flow-3da": {
+    "__comp": "17896441",
+    "content": "9ba7a03a"
+  },
+  "/Get-that-quick/docs/architecture/overview-38d": {
+    "__comp": "17896441",
+    "content": "0b1ac180"
+  },
+  "/Get-that-quick/docs/architecture/tech-stack-da8": {
+    "__comp": "17896441",
+    "content": "97ae6239"
+  },
+  "/Get-that-quick/docs/client/api-client-6c3": {
+    "__comp": "17896441",
+    "content": "23996805"
+  },
+  "/Get-that-quick/docs/client/components-e04": {
+    "__comp": "17896441",
+    "content": "8ddea302"
+  },
+  "/Get-that-quick/docs/client/hooks-39f": {
+    "__comp": "17896441",
+    "content": "b20494b8"
+  },
+  "/Get-that-quick/docs/client/overview-b03": {
+    "__comp": "17896441",
+    "content": "737653a3"
+  },
+  "/Get-that-quick/docs/client/pages-ae3": {
+    "__comp": "17896441",
+    "content": "233f9685"
+  },
+  "/Get-that-quick/docs/client/styling-7b0": {
+    "__comp": "17896441",
+    "content": "f63d8a74"
+  },
+  "/Get-that-quick/docs/getting-started-7b4": {
+    "__comp": "17896441",
+    "content": "d589d3a7"
+  },
+  "/Get-that-quick/docs/guides/docker-deployment-217": {
+    "__comp": "17896441",
+    "content": "f077c73f"
+  },
+  "/Get-that-quick/docs/guides/github-pages-5e9": {
+    "__comp": "17896441",
+    "content": "fbf88b62"
+  },
+  "/Get-that-quick/docs/guides/template-format-bf8": {
+    "__comp": "17896441",
+    "content": "5e6bf5f0"
+  },
+  "/Get-that-quick/docs/server/lib-bd0": {
+    "__comp": "17896441",
+    "content": "29e3c472"
+  },
+  "/Get-that-quick/docs/server/overview-655": {
+    "__comp": "17896441",
+    "content": "b1016243"
+  },
+  "/Get-that-quick/docs/server/routes-fb8": {
+    "__comp": "17896441",
+    "content": "8c55ea4f"
+  },
+  "/Get-that-quick/docs/server/seed-templates-b98": {
+    "__comp": "17896441",
+    "content": "37ca6b9e"
+  },
+  "/Get-that-quick/docs/server/services-547": {
+    "__comp": "17896441",
+    "content": "b668c66d"
+  },
+  "/Get-that-quick/docs/server/websocket-259": {
+    "__comp": "17896441",
+    "content": "aeef935f"
+  },
+  "/Get-that-quick/docs/shared/schemas-f11": {
+    "__comp": "17896441",
+    "content": "abe77c0b"
+  },
+  "/Get-that-quick/docs/shared/types-331": {
+    "__comp": "17896441",
+    "content": "faa69182"
+  },
+  "/Get-that-quick/-722": {
+    "__comp": "1df93b7f",
+    "__context": {
+      "plugin": "a7456010"
+    },
+    "config": "5e9f5e1a"
+  }
+}

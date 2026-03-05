@@ -1,0 +1,28 @@
+{
+  "id": "getting-started",
+  "title": "Getting Started",
+  "description": "Prerequisites",
+  "source": "@site/docs/getting-started.md",
+  "sourceDirName": ".",
+  "slug": "/getting-started",
+  "permalink": "/Get-that-quick/docs/getting-started",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Gurkirat-Singh-bit/Get-that-quick/tree/main/docs-site/docs/getting-started.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2,
+    "title": "Getting Started"
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Introduction",
+    "permalink": "/Get-that-quick/docs/"
+  },
+  "next": {
+    "title": "System Overview",
+    "permalink": "/Get-that-quick/docs/architecture/overview"
+  }
+}

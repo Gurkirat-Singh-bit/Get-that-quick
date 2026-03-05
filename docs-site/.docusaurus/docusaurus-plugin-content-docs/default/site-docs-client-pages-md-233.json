@@ -1,0 +1,28 @@
+{
+  "id": "client/pages",
+  "title": "Pages",
+  "description": "GetThatQuick has two top-level pages, selected by App.tsx based on whether the user has completed onboarding.",
+  "source": "@site/docs/client/pages.md",
+  "sourceDirName": "client",
+  "slug": "/client/pages",
+  "permalink": "/Get-that-quick/docs/client/pages",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Gurkirat-Singh-bit/Get-that-quick/tree/main/docs-site/docs/client/pages.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2,
+    "title": "Pages"
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Client Overview",
+    "permalink": "/Get-that-quick/docs/client/overview"
+  },
+  "next": {
+    "title": "Components",
+    "permalink": "/Get-that-quick/docs/client/components"
+  }
+}

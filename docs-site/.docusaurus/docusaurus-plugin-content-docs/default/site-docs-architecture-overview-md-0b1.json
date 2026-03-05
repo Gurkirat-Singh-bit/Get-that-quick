@@ -1,0 +1,28 @@
+{
+  "id": "architecture/overview",
+  "title": "System Overview",
+  "description": "GetThatQuick is a self-hosted, Docker-packaged desktop AI assistant that combines prompt templates, multi-provider LLM chat, and offline speech-to-text in a single container.",
+  "source": "@site/docs/architecture/overview.md",
+  "sourceDirName": "architecture",
+  "slug": "/architecture/overview",
+  "permalink": "/Get-that-quick/docs/architecture/overview",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Gurkirat-Singh-bit/Get-that-quick/tree/main/docs-site/docs/architecture/overview.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_position": 1,
+    "title": "System Overview"
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Getting Started",
+    "permalink": "/Get-that-quick/docs/getting-started"
+  },
+  "next": {
+    "title": "Tech Stack",
+    "permalink": "/Get-that-quick/docs/architecture/tech-stack"
+  }
+}

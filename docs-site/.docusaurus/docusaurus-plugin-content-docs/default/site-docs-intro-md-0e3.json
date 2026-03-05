@@ -1,0 +1,25 @@
+{
+  "id": "intro",
+  "title": "Introduction",
+  "description": "Self-hosted AI prompt workbench with speech-to-text, reusable templates, and multi-provider LLM support — all in a single Docker container.",
+  "source": "@site/docs/intro.md",
+  "sourceDirName": ".",
+  "slug": "/",
+  "permalink": "/Get-that-quick/docs/",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Gurkirat-Singh-bit/Get-that-quick/tree/main/docs-site/docs/intro.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "slug": "/",
+    "sidebar_position": 1,
+    "title": "Introduction"
+  },
+  "sidebar": "docsSidebar",
+  "next": {
+    "title": "Getting Started",
+    "permalink": "/Get-that-quick/docs/getting-started"
+  }
+}

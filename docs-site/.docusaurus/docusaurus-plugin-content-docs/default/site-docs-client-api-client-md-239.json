@@ -1,0 +1,28 @@
+{
+  "id": "client/api-client",
+  "title": "API Client",
+  "description": "File: src/api/client.ts (637 lines)",
+  "source": "@site/docs/client/api-client.md",
+  "sourceDirName": "client",
+  "slug": "/client/api-client",
+  "permalink": "/Get-that-quick/docs/client/api-client",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Gurkirat-Singh-bit/Get-that-quick/tree/main/docs-site/docs/client/api-client.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {
+    "sidebar_position": 5,
+    "title": "API Client"
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Hooks",
+    "permalink": "/Get-that-quick/docs/client/hooks"
+  },
+  "next": {
+    "title": "Styling & Theming",
+    "permalink": "/Get-that-quick/docs/client/styling"
+  }
+}

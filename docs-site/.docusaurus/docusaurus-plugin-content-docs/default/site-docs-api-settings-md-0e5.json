@@ -1,0 +1,28 @@
+{
+  "id": "api/settings",
+  "title": "Settings API",
+  "description": "REST API reference for application settings management. API keys are masked in responses for security.",
+  "source": "@site/docs/api/settings.md",
+  "sourceDirName": "api",
+  "slug": "/api/settings",
+  "permalink": "/Get-that-quick/docs/api/settings",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Gurkirat-Singh-bit/Get-that-quick/tree/main/docs-site/docs/api/settings.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {
+    "sidebar_position": 5,
+    "title": "Settings API"
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Models API",
+    "permalink": "/Get-that-quick/docs/api/models"
+  },
+  "next": {
+    "title": "WebSocket STT",
+    "permalink": "/Get-that-quick/docs/api/websocket-stt"
+  }
+}

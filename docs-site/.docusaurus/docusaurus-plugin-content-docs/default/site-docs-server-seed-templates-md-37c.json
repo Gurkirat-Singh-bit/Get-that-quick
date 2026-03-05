@@ -1,0 +1,28 @@
+{
+  "id": "server/seed-templates",
+  "title": "Seed Templates",
+  "description": "The server/seed/ directory contains five default prompt templates that are copied into the user's local templates directory on first run. These give new users a useful starting set of prompts without requiring any manual setup.",
+  "source": "@site/docs/server/seed-templates.md",
+  "sourceDirName": "server",
+  "slug": "/server/seed-templates",
+  "permalink": "/Get-that-quick/docs/server/seed-templates",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Gurkirat-Singh-bit/Get-that-quick/tree/main/docs-site/docs/server/seed-templates.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 6,
+  "frontMatter": {
+    "sidebar_position": 6,
+    "title": "Seed Templates"
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "WebSocket STT",
+    "permalink": "/Get-that-quick/docs/server/websocket"
+  },
+  "next": {
+    "title": "TypeScript Types",
+    "permalink": "/Get-that-quick/docs/shared/types"
+  }
+}

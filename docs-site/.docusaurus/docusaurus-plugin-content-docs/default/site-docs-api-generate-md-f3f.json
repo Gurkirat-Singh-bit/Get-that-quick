@@ -1,0 +1,28 @@
+{
+  "id": "api/generate",
+  "title": "Generate API",
+  "description": "REST API reference for AI text generation. Forwards conversations to the configured AI provider and supports both streaming (SSE) and standard JSON responses.",
+  "source": "@site/docs/api/generate.md",
+  "sourceDirName": "api",
+  "slug": "/api/generate",
+  "permalink": "/Get-that-quick/docs/api/generate",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Gurkirat-Singh-bit/Get-that-quick/tree/main/docs-site/docs/api/generate.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_position": 3,
+    "title": "Generate API"
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Templates API",
+    "permalink": "/Get-that-quick/docs/api/templates"
+  },
+  "next": {
+    "title": "Models API",
+    "permalink": "/Get-that-quick/docs/api/models"
+  }
+}

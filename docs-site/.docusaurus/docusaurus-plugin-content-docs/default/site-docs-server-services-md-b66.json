@@ -1,0 +1,28 @@
+{
+  "id": "server/services",
+  "title": "Services",
+  "description": "The service layer (server/src/services/) contains all business logic, separated from route handlers. Each service owns a specific domain and manages its own data access.",
+  "source": "@site/docs/server/services.md",
+  "sourceDirName": "server",
+  "slug": "/server/services",
+  "permalink": "/Get-that-quick/docs/server/services",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Gurkirat-Singh-bit/Get-that-quick/tree/main/docs-site/docs/server/services.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_position": 3,
+    "title": "Services"
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Routes",
+    "permalink": "/Get-that-quick/docs/server/routes"
+  },
+  "next": {
+    "title": "Library Utilities",
+    "permalink": "/Get-that-quick/docs/server/lib"
+  }
+}
