@@ -313,6 +313,7 @@ export function ChatArea({
           }
         }}
         planQuestions={planQuestions}
+        sttProvider={settings?.stt?.provider ?? "local"}
       />
     </div>
   );

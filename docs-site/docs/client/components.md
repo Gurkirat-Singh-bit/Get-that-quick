@@ -50,10 +50,18 @@ The main message display area. Features:
 The message composition component at the bottom of the chat area.
 
 - **Auto-expanding textarea** — grows vertically as the user types, up to a max height
-- **Voice dictation** — connects to the Vosk speech-to-text engine via WebSocket; microphone button toggles recording
+- **Local voice dictation** — connects to the Vosk speech-to-text engine via WebSocket; microphone button toggles recording
+- **Cloud voice dictation** — records audio via `MediaRecorder`, uploads to `/api/stt/transcribe`, and fills the input with the transcript (Groq Whisper or OpenAI Whisper)
+- **Inline scrolling waveform** — when cloud recording is active the textarea is replaced by a live waveform visualization: 80 bars scroll right-to-left showing audio amplitude history, using the Web Audio API `AnalyserNode` with square-root amplitude scaling for high sensitivity
 - **Document attachment** — attach files via a file picker or drag-and-drop onto the input area
 - **Plan mode** — question-style UI for plan mode interactions
 - **Stop button** — cancels an in-progress LLM generation via abort signal
+
+**Props:**
+
+| Prop | Type | Description |
+|---|---|---|
+| `sttProvider` | `"local" \| "groq" \| "openai-whisper"` | Which STT backend to use; controls recording path and waveform visibility |
 
 ### Message
 
@@ -178,8 +186,8 @@ A full-screen modal with 6 tabs:
 |---|---|
 | **General** | Application-wide preferences |
 | **Templates** | Default template settings, import/export |
-| **Models & LLM** | Provider selection, model management, download/activate/delete models |
-| **Voice/STT** | Vosk model path, microphone settings |
+| **Models & LLM** | Provider selection, model management, download/activate/delete models; **GitHub Copilot OAuth device flow** (connect/disconnect) |
+| **Voice/STT** | STT provider selector (Local Vosk / Groq Whisper / OpenAI Whisper), cloud API key + model input, Vosk model management |
 | **Backup** | Export/import session data |
 | **About** | Version info, links, credits |
 

@@ -110,6 +110,9 @@ export const SettingsSchema = z.object({
   stt: z.object({
     activeModel: z.string(),
     sampleRate: z.number().int().positive(),
+    provider: z.enum(["local", "groq", "openai-whisper"]).optional(),
+    cloudApiKey: z.string().optional(),
+    cloudModel: z.string().optional(),
   }),
   general: z.object({
     theme: z.enum(["dark", "light"]),

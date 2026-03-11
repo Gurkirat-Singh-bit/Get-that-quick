@@ -60,6 +60,9 @@ You're running locally. Be direct and technical.`,
   stt: {
     activeModel: "vosk-model-small-en-us-0.15",
     sampleRate: SAMPLE_RATE,
+    provider: "local" as const,
+    cloudApiKey: "",
+    cloudModel: "whisper-large-v3-turbo",
   },
   general: {
     theme: "dark",

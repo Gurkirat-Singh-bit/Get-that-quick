@@ -17,7 +17,6 @@
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
 import { existsSync, readdirSync, copyFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -26,6 +25,8 @@ import templatesRoute from "./routes/templates";
 import generateRoute from "./routes/generate";
 import modelsRoute from "./routes/models";
 import settingsRoute from "./routes/settings";
+import sttRoute from "./routes/stt";
+import authRoute from "./routes/auth";
 
 import { ensureDataDirs, getLocalTemplatesDir, getDataDir } from "./lib/paths";
 import { PORT } from "./lib/constants";
@@ -63,9 +64,72 @@ seedTemplates();
 
 const app = new Hono();
 
+// ── Structured logger ─────────────────────────────────────────────────────
+
+const METHOD_COLORS: Record<string, string> = {
+  GET: "\x1b[36m",    // cyan
+  POST: "\x1b[32m",   // green
+  PUT: "\x1b[33m",    // yellow
+  DELETE: "\x1b[31m", // red
+  PATCH: "\x1b[35m",  // magenta
+};
+const RESET = "\x1b[0m";
+const DIM = "\x1b[2m";
+const BOLD = "\x1b[1m";
+const GREEN = "\x1b[32m";
+const RED = "\x1b[31m";
+const YELLOW = "\x1b[33m";
+
+function colorStatus(status: number): string {
+  if (status < 300) return `${GREEN}${status}${RESET}`;
+  if (status < 400) return `${YELLOW}${status}${RESET}`;
+  return `${RED}${status}${RESET}`;
+}
+
+function formatPath(path: string, settings: ReturnType<typeof getSettings>): string {
+  // Add contextual info for key endpoints
+  if (path === "/api/generate") {
+    try {
+      const p = settings.ai.provider;
+      const m = settings.ai.providers[p]?.model ?? "?";
+      return `${path} ${DIM}[${p}/${m}]${RESET}`;
+    } catch { return path; }
+  }
+  if (path === "/api/stt/transcribe") {
+    const p = settings.stt.provider ?? "local";
+    const m = settings.stt.cloudModel ?? "";
+    return `${path} ${DIM}[${p}${m ? "/" + m : ""}]${RESET}`;
+  }
+  if (path.startsWith("/api/auth/copilot")) {
+    return `${path} ${DIM}[github-copilot]${RESET}`;
+  }
+  return path;
+}
+
 // Middleware
 app.use("*", cors());
-app.use("*", logger());
+app.use("*", async (c, next) => {
+  // Skip logging for static assets
+  const path = new URL(c.req.url).pathname;
+  if (path.startsWith("/assets/") || path.startsWith("/fonts/") || path === "/") {
+    return next();
+  }
+
+  const start = Date.now();
+  await next();
+  const ms = Date.now() - start;
+  const method = c.req.method;
+  const status = c.res.status;
+  const color = METHOD_COLORS[method] ?? "\x1b[37m";
+
+  let settings: ReturnType<typeof getSettings>;
+  try { settings = getSettings(); } catch { settings = DEFAULT_SETTINGS as any; }
+
+  const formattedPath = formatPath(path, settings);
+  const msStr = ms > 500 ? `${YELLOW}${ms}ms${RESET}` : `${DIM}${ms}ms${RESET}`;
+
+  console.log(`  ${color}${BOLD}${method}${RESET} ${formattedPath} → ${colorStatus(status)} ${msStr}`);
+});
 
 // API routes
 app.route("/api/sessions", sessionsRoute);
@@ -73,6 +137,8 @@ app.route("/api/templates", templatesRoute);
 app.route("/api/generate", generateRoute);
 app.route("/api/models", modelsRoute);
 app.route("/api/settings", settingsRoute);
+app.route("/api/stt", sttRoute);
+app.route("/api/auth", authRoute);
 
 // Health check
 app.get("/api/health", (c) =>

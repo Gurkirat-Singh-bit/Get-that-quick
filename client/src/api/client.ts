@@ -513,6 +513,110 @@ export function healthCheck(): Promise<{
   return request("/health");
 }
 
+// ── Cloud STT ───────────────────────────────────────────────────────────
+
+/**
+ * Transcribe an audio blob via the server's cloud STT endpoint.
+ * The server forwards to Groq or OpenAI Whisper using the stored API key.
+ *
+ * @param audioBlob - The recorded audio blob (webm, ogg, wav, etc.)
+ * @returns The transcribed text string.
+ */
+export async function transcribeAudio(audioBlob: Blob): Promise<string> {
+  const form = new FormData();
+  form.append("audio", audioBlob, "recording.webm");
+
+  const res = await fetch(`${BASE}/stt/transcribe`, {
+    method: "POST",
+    body: form,
+  });
+
+  let body: ApiResponse<{ text: string }> | ApiError;
+  try {
+    body = await res.json() as ApiResponse<{ text: string }> | ApiError;
+  } catch {
+    throw new ApiClientError(`Server error: ${res.status}`, res.status);
+  }
+
+  if (!body.ok) {
+    throw new ApiClientError((body as ApiError).error, res.status);
+  }
+
+  return (body as ApiResponse<{ text: string }>).data.text;
+}
+
+// ── GitHub Copilot Auth ──────────────────────────────────────────────────
+
+export interface CopilotDeviceFlow {
+  deviceCode: string;
+  userCode: string;
+  verificationUri: string;
+  interval: number;
+  expiresIn: number;
+}
+
+export interface CopilotPollResult {
+  ok: boolean;
+  pending?: boolean;
+  slowDown?: boolean;
+  error?: string;
+  providerName?: string;
+}
+
+/**
+ * Start the GitHub Copilot OAuth device flow.
+ * Returns the user_code the user needs to enter at github.com/login/device.
+ */
+export async function startCopilotAuth(): Promise<CopilotDeviceFlow> {
+  return request<CopilotDeviceFlow>("/auth/copilot/start", { method: "POST" });
+}
+
+/**
+ * Poll GitHub to check if the user has authorized.
+ * Call this repeatedly until `ok: true` or a non-pending error.
+ * Uses raw fetch because the server returns ok:false for pending (not an error).
+ */
+export async function pollCopilotAuth(deviceCode: string, providerName?: string): Promise<CopilotPollResult> {
+  try {
+    const res = await fetch(`${BASE}/auth/copilot/poll`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceCode, providerName }),
+    });
+    const body = await res.json() as {
+      ok: boolean;
+      pending?: boolean;
+      slowDown?: boolean;
+      error?: string;
+      data?: { connected: boolean; providerName: string };
+    };
+
+    if (body.ok && body.data) {
+      return { ok: true, providerName: body.data.providerName };
+    }
+    if (body.pending) {
+      return { ok: false, pending: true, slowDown: body.slowDown };
+    }
+    return { ok: false, error: body.error || "Unknown error" };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/**
+ * Get the current GitHub Copilot connection status.
+ */
+export function getCopilotStatus(): Promise<{ connected: boolean; providerName?: string; model?: string }> {
+  return request<{ connected: boolean; providerName?: string; model?: string }>("/auth/copilot/status");
+}
+
+/**
+ * Disconnect GitHub Copilot by removing the stored token.
+ */
+export function disconnectCopilot(): Promise<{ disconnected: boolean }> {
+  return request<{ disconnected: boolean }>("/auth/copilot/disconnect", { method: "POST" });
+}
+
 // ── Generate (streaming) ────────────────────────────────────────────────
 
 /**

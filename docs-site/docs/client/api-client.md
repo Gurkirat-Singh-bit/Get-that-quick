@@ -81,6 +81,21 @@ The client catches and wraps:
 | `generateStream(sessionId, messages, options)` | `POST /api/generate/stream` | Stream LLM response (SSE) |
 | `generate(sessionId, messages, options)` | `POST /api/generate` | Single-shot LLM response |
 
+### Cloud STT
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `transcribeAudio(blob)` | `POST /api/stt/transcribe` | Upload a recorded audio `Blob` (webm/ogg/wav) and receive the transcript string |
+
+### GitHub Copilot Auth
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `startCopilotAuth()` | `POST /api/auth/copilot/start` | Start the OAuth device flow; returns `{ deviceCode, userCode, verificationUri, interval, expiresIn }` |
+| `pollCopilotAuth(deviceCode, providerName?)` | `POST /api/auth/copilot/poll` | Poll for authorization; returns raw response to handle `pending: true` without throwing |
+| `getCopilotStatus()` | `GET /api/auth/copilot/status` | Check if a Copilot provider is connected |
+| `disconnectCopilot()` | `POST /api/auth/copilot/disconnect` | Remove the stored Copilot token and provider |
+
 ### Health
 
 | Method | Endpoint | Description |

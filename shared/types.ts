@@ -188,6 +188,12 @@ export interface Settings {
     activeModel: string;
     /** Audio sample rate in Hz. */
     sampleRate: number;
+    /** STT provider: local Vosk or cloud-based Whisper. */
+    provider?: "local" | "groq" | "openai-whisper";
+    /** API key for cloud STT provider (Groq or OpenAI). */
+    cloudApiKey?: string;
+    /** Model identifier for cloud STT (e.g. "whisper-large-v3-turbo"). */
+    cloudModel?: string;
   };
   /** General UI preferences. */
   general: {

@@ -60,6 +60,8 @@ const sidebars: SidebarsConfig = {
         'api/models',
         'api/settings',
         'api/websocket-stt',
+        'api/cloud-stt',
+        'api/github-copilot-auth',
       ],
     },
     {
@@ -70,6 +72,8 @@ const sidebars: SidebarsConfig = {
         'guides/docker-deployment',
         'guides/template-format',
         'guides/github-pages',
+        'guides/cloud-stt',
+        'guides/github-copilot',
       ],
     },
   ],

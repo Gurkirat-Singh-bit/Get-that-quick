@@ -18,6 +18,7 @@ import { ArrowUp, Mic, MicOff, Paperclip, ListChecks, FileText, X, Check, Send, 
 import { cn } from "@/lib/utils";
 import type { AttachedDocument } from "@shared/types";
 import type { PlanQuestion } from "@/components/chat/message";
+import * as api from "@/api/client";
 
 /** Props accepted by {@link ChatInput}. */
 interface ChatInputProps {
@@ -37,6 +38,8 @@ interface ChatInputProps {
   onTogglePlanMode: () => void;
   /** Plan questions extracted from the last assistant message. */
   planQuestions?: PlanQuestion[];
+  /** Which STT provider is active — "local" uses Vosk WebSocket, "groq"/"openai-whisper" uses cloud transcription. */
+  sttProvider?: "local" | "groq" | "openai-whisper";
 }
 
 /** Target sample rate that the Vosk server expects. */
@@ -71,6 +74,7 @@ export function ChatInput({
   planMode,
   onTogglePlanMode,
   planQuestions = [],
+  sttProvider = "local",
 }: ChatInputProps) {
   const [value, setValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -81,6 +85,17 @@ export function ChatInput({
   const [listening, setListening] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceConnecting, setVoiceConnecting] = useState(false);
+
+  // ── Cloud STT state ──────────────────────────────────────────────────
+  const [cloudTranscribing, setCloudTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const unmountedRef = useRef(false);
+
+  // ── Waveform state ───────────────────────────────────────────────────
+  const [waveformBars, setWaveformBars] = useState<number[]>([]);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const waveformRafRef = useRef<number | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -301,16 +316,159 @@ export function ChatInput({
     setVoiceConnecting(false);
   }, [cleanupAudio, cleanupWs]);
 
+  // ── Cloud STT (MediaRecorder → /api/stt/transcribe) ──────────────────
+
+  const stopWaveform = useCallback(() => {
+    if (waveformRafRef.current) {
+      cancelAnimationFrame(waveformRafRef.current);
+      waveformRafRef.current = null;
+    }
+    analyserRef.current = null;
+    setWaveformBars([]);
+  }, []);
+
+  const startCloudRecording = useCallback(async () => {
+    setVoiceError(null);
+    setVoiceConnecting(true);
+    audioChunksRef.current = [];
+    unmountedRef.current = false;
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err: any) {
+      if (err.name === "NotAllowedError") {
+        setVoiceError("Microphone permission denied.");
+      } else if (err.name === "NotFoundError") {
+        setVoiceError("No microphone found.");
+      } else {
+        setVoiceError(`Mic error: ${err.message}`);
+      }
+      setVoiceConnecting(false);
+      return;
+    }
+
+    streamRef.current = stream;
+    const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ? "audio/webm;codecs=opus"
+      : MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : "audio/ogg";
+
+    // ── Scrolling waveform analyser setup ────────────────────────────
+    // New amplitude values enter from the right and scroll left,
+    // showing a continuous audio history (ChatGPT-style scrolling waveform).
+    const BAR_COUNT = 80;
+    const scrollBars = new Array(BAR_COUNT).fill(6) as number[];
+    setWaveformBars([...scrollBars]);
+    try {
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048; // time-domain: more samples → smoother amplitude
+      analyser.smoothingTimeConstant = 0.15; // low smoothing = fast, sensitive response
+      source.connect(analyser);
+      analyserRef.current = analyser;
+
+      const dataArray = new Uint8Array(analyser.fftSize);
+      let lastPushTime = 0;
+
+      const drawWaveform = (timestamp: number) => {
+        if (!analyserRef.current || unmountedRef.current) return;
+        // Push a new bar every ~35 ms (≈ 28 fps scroll speed)
+        if (timestamp - lastPushTime >= 35) {
+          analyserRef.current.getByteTimeDomainData(dataArray);
+          // Compute mean absolute deviation from the 128 center (silence = 128)
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += Math.abs(dataArray[i] - 128);
+          }
+          const mad = sum / dataArray.length; // 0 = silence, 128 = max
+          // Square-root scaling boosts quiet sounds so even soft speech is visible
+          const normalized = Math.sqrt(mad / 128);
+          const newHeight = Math.max(6, Math.min(96, normalized * 90 + 6));
+          scrollBars.shift();
+          scrollBars.push(newHeight);
+          setWaveformBars([...scrollBars]);
+          lastPushTime = timestamp;
+        }
+        waveformRafRef.current = requestAnimationFrame(drawWaveform);
+      };
+      waveformRafRef.current = requestAnimationFrame(drawWaveform);
+    } catch {
+      // Waveform is non-critical — continue without it
+    }
+
+    const recorder = new MediaRecorder(stream, { mimeType });
+    mediaRecorderRef.current = recorder;
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunksRef.current.push(e.data);
+    };
+
+    recorder.onstop = async () => {
+      stopWaveform();
+      stream.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      if (!unmountedRef.current) setListening(false);
+
+      if (audioChunksRef.current.length === 0) {
+        if (!unmountedRef.current) setVoiceError("No audio recorded. Try holding the mic longer.");
+        return;
+      }
+
+      const blob = new Blob(audioChunksRef.current, { type: mimeType });
+      audioChunksRef.current = [];
+
+      if (unmountedRef.current) return; // component unmounted, skip state updates
+      setCloudTranscribing(true);
+      try {
+        const text = await api.transcribeAudio(blob);
+        if (!unmountedRef.current && text) {
+          setValue((prev) => (prev ? prev + " " + text : text));
+        }
+      } catch (err: any) {
+        if (!unmountedRef.current) setVoiceError(err.message || "Transcription failed.");
+      } finally {
+        if (!unmountedRef.current) setCloudTranscribing(false);
+      }
+    };
+
+    recorder.start();
+    setVoiceConnecting(false);
+    setListening(true);
+  }, [stopWaveform]);
+
+  const stopCloudRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    } else {
+      stopWaveform();
+      setListening(false);
+    }
+  }, [stopWaveform]);
+
   const toggleVoice = useCallback(() => {
-    if (listening) stopListening();
-    else startListening();
-  }, [listening, startListening, stopListening]);
+    if (sttProvider === "local") {
+      if (listening) stopListening();
+      else startListening();
+    } else {
+      if (listening) stopCloudRecording();
+      else startCloudRecording();
+    }
+  }, [sttProvider, listening, stopListening, startListening, stopCloudRecording, startCloudRecording]);
 
   useEffect(() => {
     return () => {
+      unmountedRef.current = true;
       stoppingRef.current = true;
       cleanupAudio();
       cleanupWs();
+      // Stop cloud STT media recorder and stream if active
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+      if (waveformRafRef.current) cancelAnimationFrame(waveformRafRef.current);
     };
   }, [cleanupAudio, cleanupWs]);
 
@@ -547,30 +705,45 @@ export function ChatInput({
             />
           </div>
 
-          {/* Auto-expanding textarea */}
-          <textarea
-            ref={textareaRef}
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-              if (listening) {
-                // User manually edited the text while voice is on.
-                // Move the baseline forward so the next Vosk result
-                // appends here instead of overwriting what they typed.
-                baselineRef.current = e.target.value;
-                accumulatedRef.current = "";
-              }
-            }}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your prompt..."
-            disabled={disabled}
-            rows={1}
-            aria-label="Message input"
-            className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-sm py-3 text-zinc-800 placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-50 resize-none leading-6 overflow-y-auto"
-            style={{ maxHeight: 120 }}
-          />
+          {/* Inline waveform (cloud STT recording) or textarea */}
+          {listening && sttProvider !== "local" ? (
+            <div className="flex-1 flex items-center py-3 px-1 min-w-0">
+              <div className="flex items-center gap-[1px] w-full h-7">
+                {waveformBars.map((h, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 min-w-0 rounded-full bg-primary"
+                    style={{ height: `${h}%` }}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* Auto-expanding textarea */
+            <textarea
+              ref={textareaRef}
+              value={value}
+              onChange={(e) => {
+                setValue(e.target.value);
+                if (listening) {
+                  // User manually edited the text while voice is on.
+                  // Move the baseline forward so the next Vosk result
+                  // appends here instead of overwriting what they typed.
+                  baselineRef.current = e.target.value;
+                  accumulatedRef.current = "";
+                }
+              }}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type your prompt..."
+              disabled={disabled}
+              rows={1}
+              aria-label="Message input"
+              className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-sm py-3 text-zinc-800 placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-50 resize-none leading-6 overflow-y-auto"
+              style={{ maxHeight: 120 }}
+            />
+          )}
 
           {/* Right action buttons */}
           <div className="flex items-center gap-1 pr-1 pb-1.5 shrink-0">
@@ -592,23 +765,38 @@ export function ChatInput({
             {/* Voice dictation */}
             <button
               onClick={toggleVoice}
-              disabled={disabled || voiceConnecting}
-              aria-label={voiceConnecting ? "Loading voice model…" : listening ? "Stop voice input" : "Start voice input"}
+              disabled={disabled || voiceConnecting || cloudTranscribing}
+              aria-label={
+                cloudTranscribing ? "Transcribing…"
+                  : voiceConnecting ? "Loading…"
+                    : listening ? "Stop recording"
+                      : sttProvider !== "local" ? `Record voice (${sttProvider})`
+                        : "Start voice input"
+              }
+              title={sttProvider !== "local" ? `Cloud STT — ${sttProvider === "groq" ? "Groq Whisper" : "OpenAI Whisper"}` : "Local Vosk STT"}
               className={cn(
-                "w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed",
-                voiceConnecting
-                  ? "bg-amber-500/20 text-amber-400"
-                  : listening
-                    ? "bg-red-500 text-white animate-pulse"
-                    : "text-zinc-800 hover:text-zinc-800 hover:bg-zinc-100"
+                "relative w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed",
+                cloudTranscribing
+                  ? "bg-blue-500/20 text-blue-400"
+                  : voiceConnecting
+                    ? "bg-amber-500/20 text-amber-400"
+                    : listening
+                      ? "bg-red-500 text-white animate-pulse"
+                      : "text-zinc-800 hover:text-zinc-800 hover:bg-zinc-100"
               )}
             >
-              {voiceConnecting ? (
+              {cloudTranscribing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : voiceConnecting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : listening ? (
                 <MicOff className="w-4 h-4" />
               ) : (
                 <Mic className="w-4 h-4" />
+              )}
+              {/* Cloud badge — tiny indicator when cloud STT is configured */}
+              {sttProvider !== "local" && !listening && !cloudTranscribing && !voiceConnecting && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-blue-400 border border-white" />
               )}
             </button>
 
@@ -636,7 +824,10 @@ export function ChatInput({
           </div>
         </div>
 
-        {/* Voice status — errors only; loading/listening state is communicated by the mic button itself */}
+        {/* Voice status */}
+        {cloudTranscribing && (
+          <p className="text-center text-xs text-blue-500 mt-2">Transcribing…</p>
+        )}
         {voiceError && (
           <p className="text-center text-xs text-red-500 mt-2">{voiceError}</p>
         )}

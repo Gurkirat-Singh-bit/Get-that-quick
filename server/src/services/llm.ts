@@ -56,6 +56,59 @@ interface ExtendedCompletionParams {
   include_reasoning?: boolean;
 }
 
+// ── GitHub Copilot token cache ─────────────────────────────────────────────
+
+/** In-memory cache for the short-lived Copilot API token. */
+const copilotTokenCache: Record<string, { token: string; expiresAt: number }> = {};
+
+/**
+ * Exchange a GitHub OAuth token (gho_...) for a short-lived Copilot API token.
+ * Caches the result and reuses it until 5 minutes before expiry.
+ *
+ * @param githubToken - The long-lived OAuth token from the device flow.
+ * @returns A short-lived Copilot API token.
+ */
+export async function getCopilotToken(githubToken: string): Promise<string> {
+  if (!githubToken) {
+    throw new Error("GitHub Copilot is not authenticated. Connect it in Settings → Models & LLM.");
+  }
+
+  const cached = copilotTokenCache[githubToken];
+  const now = Date.now() / 1000;
+
+  // Evict expired cache entries to prevent unbounded growth
+  for (const [key, val] of Object.entries(copilotTokenCache)) {
+    if (val.expiresAt < now) delete copilotTokenCache[key];
+  }
+
+  // Reuse if still valid with 5-minute buffer
+  if (cached && cached.expiresAt > now + 300) {
+    return cached.token;
+  }
+
+  const res = await fetch("https://api.github.com/copilot_internal/v2/token", {
+    headers: {
+      Authorization: `Bearer ${githubToken}`,
+      "Editor-Version": "vscode/1.95.0",
+      "Editor-Plugin-Version": "copilot-chat/0.22.4",
+      "User-Agent": "GitHubCopilotChat/0.22.4",
+    },
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Failed to get Copilot token: ${res.status} ${body}`);
+  }
+
+  const data = await res.json() as { token: string; expires_at: number };
+  copilotTokenCache[githubToken] = {
+    token: data.token,
+    expiresAt: data.expires_at,
+  };
+
+  return data.token;
+}
+
 // ── Client builder ────────────────────────────────────────────────────────
 /**
  * Build an OpenAI client from the current settings or a named provider override.
@@ -63,10 +116,11 @@ interface ExtendedCompletionParams {
  * @param providerOverride - Optional provider name. Defaults to the active provider.
  * @returns Object with the OpenAI client and the model name to use.
  * @throws {Error} If the provider is not configured or no model is selected.
- */function buildClient(providerOverride?: string): {
+ */
+async function buildClient(providerOverride?: string): Promise<{
   client: OpenAI;
   model: string;
-} {
+}> {
   const settings = getSettings();
   const name = providerOverride ?? settings.ai.provider;
   const provider = settings.ai.providers[name];
@@ -84,12 +138,32 @@ interface ExtendedCompletionParams {
   }
 
   const isOpenRouter = provider.baseUrl.includes("openrouter.ai");
+  const isCopilot = provider.baseUrl.includes("api.githubcopilot.com");
+
+  let apiKey = provider.apiKey || "none";
+  let extraHeaders: Record<string, string> | undefined;
+
+  if (isCopilot) {
+    // Exchange the stored GitHub OAuth token for a short-lived Copilot token
+    const copilotToken = await getCopilotToken(provider.apiKey);
+    apiKey = copilotToken;
+    extraHeaders = {
+      "Copilot-Integration-Id": "vscode-chat",
+      "Editor-Version": "vscode/1.95.0",
+      "Editor-Plugin-Version": "copilot-chat/0.22.4",
+      "User-Agent": "GitHubCopilotChat/0.22.4",
+    };
+  } else if (isOpenRouter) {
+    extraHeaders = {
+      "HTTP-Referer": "https://getthatquick.app",
+      "X-Title": "GetThatQuick",
+    };
+  }
+
   const client = new OpenAI({
-    apiKey: provider.apiKey || "none",
+    apiKey,
     baseURL: provider.baseUrl,
-    defaultHeaders: isOpenRouter
-      ? { "HTTP-Referer": "https://getthatquick.app", "X-Title": "GetThatQuick" }
-      : undefined,
+    defaultHeaders: extraHeaders,
   });
 
   return { client, model: provider.model };
@@ -113,7 +187,7 @@ export async function* generateStream(
   options?: { temperature?: number; maxTokens?: number; thinkingEnabled?: boolean },
   providerOverride?: string
 ): AsyncGenerator<string> {
-  const { client, model } = buildClient(providerOverride);
+  const { client, model } = await buildClient(providerOverride);
 
   const params: ExtendedCompletionParams = {
     model,
@@ -177,7 +251,7 @@ export async function generate(
   options?: { temperature?: number; maxTokens?: number; thinkingEnabled?: boolean },
   providerOverride?: string
 ): Promise<string> {
-  const { client, model } = buildClient(providerOverride);
+  const { client, model } = await buildClient(providerOverride);
 
   const params: ExtendedCompletionParams = {
     model,
@@ -216,12 +290,31 @@ export async function testProvider(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const isOpenRouter = config.baseUrl.includes("openrouter.ai");
+    const isCopilot = config.baseUrl.includes("api.githubcopilot.com");
+
+    let apiKey = config.apiKey || "none";
+    let extraHeaders: Record<string, string> | undefined;
+
+    if (isCopilot) {
+      const copilotToken = await getCopilotToken(config.apiKey);
+      apiKey = copilotToken;
+      extraHeaders = {
+        "Copilot-Integration-Id": "vscode-chat",
+        "Editor-Version": "vscode/1.95.0",
+        "Editor-Plugin-Version": "copilot-chat/0.22.4",
+        "User-Agent": "GitHubCopilotChat/0.22.4",
+      };
+    } else if (isOpenRouter) {
+      extraHeaders = {
+        "HTTP-Referer": "https://getthatquick.app",
+        "X-Title": "GetThatQuick",
+      };
+    }
+
     const client = new OpenAI({
-      apiKey: config.apiKey || "none",
+      apiKey,
       baseURL: config.baseUrl,
-      defaultHeaders: isOpenRouter
-        ? { "HTTP-Referer": "https://getthatquick.app", "X-Title": "GetThatQuick" }
-        : undefined,
+      defaultHeaders: extraHeaders,
     });
 
     const res = await client.chat.completions.create({
@@ -258,12 +351,31 @@ export async function listProviderModels(
   }
 
   const isOpenRouter = provider.baseUrl.includes("openrouter.ai");
+  const isCopilot = provider.baseUrl.includes("api.githubcopilot.com");
+
+  let apiKey = provider.apiKey || "none";
+  let extraHeaders: Record<string, string> | undefined;
+
+  if (isCopilot) {
+    const copilotToken = await getCopilotToken(provider.apiKey);
+    apiKey = copilotToken;
+    extraHeaders = {
+      "Copilot-Integration-Id": "vscode-chat",
+      "Editor-Version": "vscode/1.95.0",
+      "Editor-Plugin-Version": "copilot-chat/0.22.4",
+      "User-Agent": "GitHubCopilotChat/0.22.4",
+    };
+  } else if (isOpenRouter) {
+    extraHeaders = {
+      "HTTP-Referer": "https://getthatquick.app",
+      "X-Title": "GetThatQuick",
+    };
+  }
+
   const client = new OpenAI({
-    apiKey: provider.apiKey || "none",
+    apiKey,
     baseURL: provider.baseUrl,
-    defaultHeaders: isOpenRouter
-      ? { "HTTP-Referer": "https://getthatquick.app", "X-Title": "GetThatQuick" }
-      : undefined,
+    defaultHeaders: extraHeaders,
   });
 
   try {

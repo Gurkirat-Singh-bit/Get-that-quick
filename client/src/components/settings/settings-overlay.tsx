@@ -12,8 +12,8 @@
  * @updated 2026-03-03
  */
 
-import { useState, useEffect, useCallback } from "react";
-import { X, SlidersHorizontal, HardDrive, Info, LayoutTemplate, ChevronRight, BrainCircuit, Github, BookOpen, Plus, Trash2, ExternalLink, Check, Globe, FileCode2, Download, Upload, AlertTriangle, Mic, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { X, SlidersHorizontal, HardDrive, Info, LayoutTemplate, ChevronRight, BrainCircuit, Github, BookOpen, Plus, Trash2, ExternalLink, Check, Globe, FileCode2, Download, Upload, AlertTriangle, Mic, Loader2, CheckCircle2, AlertCircle, Cloud, Key, LogOut, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { accentPresets, getAccent, setAccent } from "@/lib/accent";
 import type { Settings as SettingsType, AIProviderConfig, VoskModelInfo } from "@shared/types";
@@ -363,6 +363,89 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
   const [testResults, setTestResults] = useState<Record<string, boolean | null>>({});
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
+  // GitHub Copilot OAuth state
+  const [copilotStatus, setCopilotStatus] = useState<{ connected: boolean; providerName?: string; model?: string } | null>(null);
+  const [copilotFlow, setCopilotFlow] = useState<{
+    deviceCode: string;
+    userCode: string;
+    verificationUri: string;
+    interval: number;
+  } | null>(null);
+  const [copilotPolling, setCopilotPolling] = useState(false);
+  const [copilotError, setCopilotError] = useState<string | null>(null);
+  const [copilotConnecting, setCopilotConnecting] = useState(false);
+  const [copilotCopied, setCopilotCopied] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    api.getCopilotStatus().then(setCopilotStatus).catch(() => {});
+  }, []);
+
+  const handleStartCopilot = async () => {
+    setCopilotError(null);
+    setCopilotConnecting(true);
+    try {
+      const flow = await api.startCopilotAuth();
+      setCopilotFlow(flow);
+      setCopilotPolling(true);
+    } catch (err: any) {
+      setCopilotError(err.message || "Failed to start GitHub auth");
+    } finally {
+      setCopilotConnecting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!copilotPolling || !copilotFlow) return;
+
+    let interval = copilotFlow.interval * 1000;
+
+    const doPoll = async () => {
+      const result = await api.pollCopilotAuth(copilotFlow.deviceCode);
+      if (result.ok) {
+        setCopilotPolling(false);
+        setCopilotFlow(null);
+        const status = await api.getCopilotStatus();
+        setCopilotStatus(status);
+        // Refresh settings to show the new provider
+        const s = await api.getSettings();
+        if (s) await onUpdateSettings({ ai: s.ai });
+      } else if (!result.pending) {
+        setCopilotPolling(false);
+        setCopilotFlow(null);
+        setCopilotError(result.error || "Authorization failed");
+      } else {
+        if (result.slowDown) interval = Math.min(interval + 5000, 30000);
+        pollRef.current = setTimeout(doPoll, interval);
+      }
+    };
+
+    pollRef.current = setTimeout(doPoll, interval);
+    return () => {
+      if (pollRef.current) clearTimeout(pollRef.current);
+    };
+  }, [copilotPolling, copilotFlow, onUpdateSettings]);
+
+  const handleDisconnectCopilot = async () => {
+    try {
+      await api.disconnectCopilot();
+      setCopilotStatus({ connected: false });
+      // Refresh settings
+      const s = await api.getSettings();
+      if (s) await onUpdateSettings({ ai: s.ai });
+    } catch (err: any) {
+      setCopilotError(err.message || "Disconnect failed");
+    }
+  };
+
+  const handleCopyCode = () => {
+    if (copilotFlow?.userCode) {
+      navigator.clipboard.writeText(copilotFlow.userCode).catch(() => {});
+      setCopilotCopied(true);
+      setTimeout(() => setCopilotCopied(false), 2000);
+    }
+  };
+
   const providers = settings?.ai?.providers ?? {};
   const activeProvider = settings?.ai?.provider ?? "";
 
@@ -417,7 +500,101 @@ function ModelSettings({ settings, onUpdateSettings, onTestProvider }: ModelSett
 
   return (
     <div className="space-y-6">
+
+      {/* ── GitHub Copilot ─────────────────────────────────────────────── */}
       <div>
+        <div className="flex items-center gap-2 mb-1">
+          <Github className="w-4 h-4 text-zinc-400" />
+          <h3 className="text-sm font-semibold text-white">GitHub Copilot</h3>
+          {copilotStatus?.connected && (
+            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wide bg-emerald-500/10 text-emerald-400">
+              connected
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-zinc-500 mb-3">
+          Use your GitHub Copilot subscription (Individual, Pro, or Student) to access Claude Sonnet, GPT-4.1, Gemini 2.5 Pro and more — for free.
+        </p>
+
+        {copilotError && (
+          <div className="flex items-center gap-2 p-2.5 bg-red-500/10 border border-red-500/20 rounded-lg mb-3">
+            <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+            <p className="text-[11px] text-red-400">{copilotError}</p>
+          </div>
+        )}
+
+        {copilotStatus?.connected ? (
+          /* Connected state */
+          <div className="bg-background-dark rounded-lg border border-shell-border p-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-zinc-300 font-medium">Connected as GitHub Copilot</p>
+                <p className="text-[10px] text-zinc-500">Provider name: <span className="text-zinc-400">{copilotStatus.providerName}</span></p>
+              </div>
+              <button
+                onClick={handleDisconnectCopilot}
+                className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <LogOut className="w-3 h-3" />
+                Disconnect
+              </button>
+            </div>
+            <p className="text-[10px] text-zinc-500 bg-black/20 rounded-md px-2 py-1.5">
+              Tip: Select "github-copilot" as your active provider in the section below, then pick a model like <code className="text-primary/80">claude-sonnet-4.5</code> or <code className="text-primary/80">gpt-4.1</code>
+            </p>
+          </div>
+        ) : copilotFlow ? (
+          /* OAuth flow — waiting for user to authorize */
+          <div className="bg-background-dark rounded-lg border border-shell-border p-4 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+              <p className="text-xs text-zinc-300 font-medium">Waiting for authorization…</p>
+            </div>
+            <div>
+              <p className="text-[11px] text-zinc-500 mb-2">
+                1. Visit <a href={copilotFlow.verificationUri} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-0.5">{copilotFlow.verificationUri} <ExternalLink className="w-2.5 h-2.5" /></a>
+              </p>
+              <p className="text-[11px] text-zinc-500 mb-2">2. Enter this code:</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-center text-xl font-mono font-bold tracking-[0.3em] text-white bg-primary/10 rounded-lg py-2 px-3 border border-primary/20">
+                  {copilotFlow.userCode}
+                </code>
+                <button
+                  onClick={handleCopyCode}
+                  className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+                  title="Copy code"
+                >
+                  {copilotCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => { setCopilotFlow(null); setCopilotPolling(false); }}
+              className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          /* Not connected — show connect button */
+          <button
+            onClick={handleStartCopilot}
+            disabled={copilotConnecting}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-xs font-medium hover:bg-primary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {copilotConnecting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Github className="w-3.5 h-3.5" />
+            )}
+            Connect GitHub Copilot
+          </button>
+        )}
+      </div>
+
+      {/* ── Providers ──────────────────────────────────────────────────── */}
+      <div className="border-t border-shell-border pt-6">
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-sm font-semibold text-white">Providers</h3>
           <button
@@ -703,19 +880,49 @@ function BackupSettings() {
   );
 }
 
-/** Voice / STT settings — download, activate, delete Vosk models. */
+/** Voice / STT settings — provider selector, cloud STT config, and Vosk models. */
 function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType | null; onUpdateSettings?: (u: Partial<SettingsType>) => Promise<void> }) {
   const [models, setModels] = useState<VoskModelInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<Set<string>>(new Set());
-  const [downloadProgress, setDownloadProgress] = useState<Record<string, { 
-    percent: number; 
+  const [downloadProgress, setDownloadProgress] = useState<Record<string, {
+    percent: number;
     status: string;
     speed?: number;
     eta?: number;
   }>>({});
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+
+  // Cloud STT config state
+  const [cloudProvider, setCloudProvider] = useState<"local" | "groq" | "openai-whisper">(
+    (settings?.stt?.provider as "local" | "groq" | "openai-whisper") ?? "local"
+  );
+  const [cloudApiKey, setCloudApiKey] = useState(settings?.stt?.cloudApiKey ?? "");
+  const [cloudModel, setCloudModel] = useState(settings?.stt?.cloudModel ?? "whisper-large-v3-turbo");
+  const [cloudKeySaved, setCloudKeySaved] = useState(false);
+
+  // Sync from settings on mount
+  useEffect(() => {
+    if (settings?.stt) {
+      setCloudProvider((settings.stt.provider as "local" | "groq" | "openai-whisper") ?? "local");
+      setCloudApiKey(settings.stt.cloudApiKey ?? "");
+      setCloudModel(settings.stt.cloudModel ?? "whisper-large-v3-turbo");
+    }
+  }, [settings?.stt?.provider]);
+
+  const saveCloudSettings = async (
+    provider: "local" | "groq" | "openai-whisper",
+    apiKey: string,
+    model: string
+  ) => {
+    if (!onUpdateSettings || !settings) return;
+    await onUpdateSettings({
+      stt: { ...settings.stt, provider, cloudApiKey: apiKey, cloudModel: model },
+    });
+    setCloudKeySaved(true);
+    setTimeout(() => setCloudKeySaved(false), 2000);
+  };
 
   const refreshModels = () => {
     api.listModels()
@@ -787,8 +994,8 @@ function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType
   const handleActivate = async (id: string) => {
     try {
       await api.activateModel(id);
-      if (onUpdateSettings) {
-        await onUpdateSettings({ stt: { activeModel: id, sampleRate: settings?.stt?.sampleRate ?? 16000 } });
+      if (onUpdateSettings && settings) {
+        await onUpdateSettings({ stt: { ...settings.stt, activeModel: id } });
       }
       refreshModels();
     } catch (err: any) {
@@ -820,9 +1027,109 @@ function VoiceSettings({ settings, onUpdateSettings }: { settings?: SettingsType
 
   return (
     <div className="space-y-6">
+
+      {/* ── STT Provider Selector ──────────────────────────────────────── */}
       <div>
-        <h3 className="text-sm font-semibold text-white mb-1">Vosk Speech Models</h3>
-        <p className="text-xs text-zinc-500 mb-4">Download and manage offline speech-to-text models. Models run locally — no data leaves your machine.</p>
+        <h3 className="text-sm font-semibold text-white mb-1">Speech-to-Text Provider</h3>
+        <p className="text-xs text-zinc-500 mb-3">
+          Choose between offline Vosk (runs locally) or cloud-based Whisper (requires API key but works on any hardware).
+        </p>
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {(["local", "groq", "openai-whisper"] as const).map((p) => (
+            <button
+              key={p}
+              onClick={async () => {
+                setCloudProvider(p);
+                await saveCloudSettings(p, cloudApiKey, cloudModel);
+              }}
+              className={cn(
+                "flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-lg border text-xs font-medium transition-all",
+                cloudProvider === p
+                  ? "border-primary/60 bg-primary/10 text-primary"
+                  : "border-shell-border text-zinc-400 hover:border-primary/30 hover:bg-white/4"
+              )}
+            >
+              {p === "local" ? <Mic className="w-4 h-4" /> : <Cloud className="w-4 h-4" />}
+              {p === "local" ? "Local (Vosk)" : p === "groq" ? "Groq Whisper" : "OpenAI Whisper"}
+              {p === "groq" && <span className="text-[9px] text-emerald-400 font-normal">Free tier</span>}
+              {p === "local" && <span className="text-[9px] text-zinc-500 font-normal">Offline</span>}
+            </button>
+          ))}
+        </div>
+
+        {/* Cloud STT config */}
+        {cloudProvider !== "local" && (
+          <div className="bg-background-dark rounded-lg border border-shell-border p-3 space-y-3">
+            {cloudProvider === "groq" && (
+              <div className="flex items-start gap-2 p-2 bg-emerald-500/5 border border-emerald-500/20 rounded-md">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="text-[10px] text-zinc-400">
+                  <span className="text-emerald-400 font-medium">Free: </span>8 hrs/day · whisper-large-v3-turbo · Get API key at{" "}
+                  <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-0.5">
+                    console.groq.com <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="flex items-center gap-1.5 text-[11px] text-zinc-400 mb-1.5">
+                <Key className="w-3 h-3" />
+                API Key
+              </label>
+              <input
+                type="password"
+                value={cloudApiKey}
+                onChange={(e) => setCloudApiKey(e.target.value)}
+                onBlur={() => saveCloudSettings(cloudProvider, cloudApiKey, cloudModel)}
+                placeholder={cloudProvider === "groq" ? "gsk_..." : "sk-..."}
+                className="w-full bg-[#161618] border border-shell-border rounded-lg py-1.5 px-2.5 text-[11px] text-zinc-300 placeholder:text-zinc-600 outline-none focus:border-primary/40"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] text-zinc-400 mb-1.5 block">Model</label>
+              <select
+                value={cloudModel}
+                onChange={async (e) => {
+                  setCloudModel(e.target.value);
+                  await saveCloudSettings(cloudProvider, cloudApiKey, e.target.value);
+                }}
+                className="w-full bg-[#161618] border border-shell-border rounded-lg py-1.5 px-2.5 text-[11px] text-zinc-300 outline-none focus:border-primary/40 cursor-pointer"
+              >
+                {cloudProvider === "groq" ? (
+                  <>
+                    <option value="whisper-large-v3-turbo">whisper-large-v3-turbo (faster)</option>
+                    <option value="whisper-large-v3">whisper-large-v3 (more accurate)</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="whisper-1">whisper-1</option>
+                    <option value="gpt-4o-transcribe">gpt-4o-transcribe (best accuracy)</option>
+                    <option value="gpt-4o-mini-transcribe">gpt-4o-mini-transcribe (faster)</option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            {cloudKeySaved && (
+              <div className="flex items-center gap-1.5 text-[11px] text-emerald-400">
+                <CheckCircle2 className="w-3 h-3" />
+                Settings saved
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Vosk Models (local only) ───────────────────────────────────── */}
+      <div className={cn("border-t border-shell-border pt-6", cloudProvider !== "local" && "opacity-50")}>
+        <h3 className="text-sm font-semibold text-white mb-1">Local Vosk Models</h3>
+        <p className="text-xs text-zinc-500 mb-4">
+          {cloudProvider !== "local"
+            ? "Switch to Local (Vosk) provider above to use these offline models."
+            : "Download and manage offline speech-to-text models. No data leaves your machine."}
+        </p>
 
         {error && (
           <div className="flex items-center gap-2 p-2.5 bg-red-500/10 border border-red-500/20 rounded-lg mb-3">
