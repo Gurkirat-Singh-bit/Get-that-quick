@@ -14,6 +14,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Search, FileCode2, Globe, Plus, Trash2, Sparkles, FolderOpen, LayoutGrid, Pencil, Tag, ChevronDown, ChevronRight, X, Folder, RefreshCw } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import type { TemplateMeta, Template } from "@shared/types";
 import type { TemplateFilter } from "@/components/layout/right-icon-rail";
 
@@ -176,48 +177,51 @@ function CategoryFolder({
 
           {/* Templates in this category */}
           {node.templates.map((t) => (
-            <div
-              key={t.id}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("application/gtq-template", t.id);
-                e.dataTransfer.effectAllowed = "copy";
-              }}
-              className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing"
-              style={{ paddingLeft: `${24 + depth * 12}px` }}
-            >
-              {source === "community" ? (
-                <Globe className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
-              ) : (
-                <FileCode2 className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
-              )}
-              <div className="flex-1 min-w-0 overflow-hidden">
-                <span className="text-[11px] text-zinc-300 group-hover:text-white truncate block leading-snug">{t.title}</span>
-                {t.description && (
-                  <span className="text-[10px] text-zinc-600 truncate block">{t.description}</span>
-                )}
-              </div>
-              {source === "local" && (
-                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  {onEditTemplate && (
-                    <button
-                      onClick={() => onEditTemplate(t.id)}
-                      className="w-5 h-5 flex items-center justify-center rounded text-zinc-600 hover:text-primary"
-                      title="Edit template"
-                    >
-                      <Pencil className="w-2.5 h-2.5" />
-                    </button>
+            <Tooltip key={t.id}>
+              <TooltipTrigger asChild>
+                <div
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("application/gtq-template", t.id);
+                    e.dataTransfer.effectAllowed = "copy";
+                  }}
+                  className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing"
+                  style={{ paddingLeft: `${24 + depth * 12}px` }}
+                >
+                  {source === "community" ? (
+                    <Globe className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
+                  ) : (
+                    <FileCode2 className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
                   )}
-                  <button
-                    onClick={() => onDeleteTemplate(t.id)}
-                    className="w-5 h-5 flex items-center justify-center rounded text-zinc-600 hover:text-red-400"
-                    title="Delete template"
-                  >
-                    <Trash2 className="w-2.5 h-2.5" />
-                  </button>
+                  <span className="flex-1 min-w-0 text-[11px] text-zinc-300 group-hover:text-white truncate leading-snug">{t.title}</span>
+                  {source === "local" && (
+                    <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      {onEditTemplate && (
+                        <button
+                          onClick={() => onEditTemplate(t.id)}
+                          className="w-5 h-5 flex items-center justify-center rounded text-zinc-600 hover:text-primary"
+                          title="Edit template"
+                        >
+                          <Pencil className="w-2.5 h-2.5" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onDeleteTemplate(t.id)}
+                        className="w-5 h-5 flex items-center justify-center rounded text-zinc-600 hover:text-red-400"
+                        title="Delete template"
+                      >
+                        <Trash2 className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
+              </TooltipTrigger>
+              {t.description && (
+                <TooltipContent side="left" sideOffset={8} className="max-w-[220px] leading-relaxed">
+                  {t.description}
+                </TooltipContent>
               )}
-            </div>
+            </Tooltip>
           ))}
         </div>
       )}
@@ -357,6 +361,7 @@ export function RightSidebar({
   }, [searchQuery, communityTree, localTree]);
 
   return (
+    <TooltipProvider delayDuration={400}>
     <div className="w-full h-full flex flex-col bg-[#0E0E10] text-zinc-300 border-l border-[#1A1A1E]">
       {/* Header */}
       <div className="px-4 pt-4 pb-1 shrink-0">
@@ -445,23 +450,26 @@ export function RightSidebar({
                   ))}
                   {/* Templates at root level (no category) */}
                   {communityTree.templates.map((t) => (
-                    <div
-                      key={t.id}
-                      draggable
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData("application/gtq-template", t.id);
-                        e.dataTransfer.effectAllowed = "copy";
-                      }}
-                      className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing"
-                    >
-                      <Globe className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
-                      <div className="flex-1 min-w-0 overflow-hidden">
-                        <span className="text-[11px] text-zinc-300 group-hover:text-white truncate block leading-snug">{t.title}</span>
-                        {t.description && (
-                          <span className="text-[10px] text-zinc-600 truncate block">{t.description}</span>
-                        )}
-                      </div>
-                    </div>
+                    <Tooltip key={t.id}>
+                      <TooltipTrigger asChild>
+                        <div
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("application/gtq-template", t.id);
+                            e.dataTransfer.effectAllowed = "copy";
+                          }}
+                          className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing"
+                        >
+                          <Globe className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
+                          <span className="flex-1 min-w-0 text-[11px] text-zinc-300 group-hover:text-white truncate leading-snug">{t.title}</span>
+                        </div>
+                      </TooltipTrigger>
+                      {t.description && (
+                        <TooltipContent side="left" sideOffset={8} className="max-w-[220px] leading-relaxed">
+                          {t.description}
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
                   ))}
                 </div>
               )}
@@ -636,41 +644,44 @@ export function RightSidebar({
                   ))}
                   {/* Templates at root level (no category) */}
                   {localTree.templates.map((t) => (
-                    <div
-                      key={t.id}
-                      draggable
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData("application/gtq-template", t.id);
-                        e.dataTransfer.effectAllowed = "copy";
-                      }}
-                      className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing"
-                    >
-                      <FileCode2 className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
-                      <div className="flex-1 min-w-0 overflow-hidden">
-                        <span className="text-[11px] text-zinc-300 group-hover:text-white truncate block leading-snug">{t.title}</span>
-                        {t.description && (
-                          <span className="text-[10px] text-zinc-600 truncate block">{t.description}</span>
-                        )}
-                      </div>
-                      <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                        {onEditTemplate && (
-                          <button
-                            onClick={() => onEditTemplate(t.id)}
-                            className="w-5 h-5 flex items-center justify-center rounded text-zinc-600 hover:text-primary"
-                            title="Edit template"
-                          >
-                            <Pencil className="w-2.5 h-2.5" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => onDeleteTemplate(t.id)}
-                          className="w-5 h-5 flex items-center justify-center rounded text-zinc-600 hover:text-red-400"
-                          title="Delete template"
+                    <Tooltip key={t.id}>
+                      <TooltipTrigger asChild>
+                        <div
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("application/gtq-template", t.id);
+                            e.dataTransfer.effectAllowed = "copy";
+                          }}
+                          className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing"
                         >
-                          <Trash2 className="w-2.5 h-2.5" />
-                        </button>
-                      </div>
-                    </div>
+                          <FileCode2 className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
+                          <span className="flex-1 min-w-0 text-[11px] text-zinc-300 group-hover:text-white truncate leading-snug">{t.title}</span>
+                          <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            {onEditTemplate && (
+                              <button
+                                onClick={() => onEditTemplate(t.id)}
+                                className="w-5 h-5 flex items-center justify-center rounded text-zinc-600 hover:text-primary"
+                                title="Edit template"
+                              >
+                                <Pencil className="w-2.5 h-2.5" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => onDeleteTemplate(t.id)}
+                              className="w-5 h-5 flex items-center justify-center rounded text-zinc-600 hover:text-red-400"
+                              title="Delete template"
+                            >
+                              <Trash2 className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      {t.description && (
+                        <TooltipContent side="left" sideOffset={8} className="max-w-[220px] leading-relaxed">
+                          {t.description}
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
                   ))}
                 </div>
               )}
@@ -679,5 +690,6 @@ export function RightSidebar({
         </div>
       </ScrollArea>
     </div>
+    </TooltipProvider>
   );
 }

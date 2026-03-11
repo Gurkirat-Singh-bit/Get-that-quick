@@ -755,7 +755,7 @@ export function ChatInput({
               className={cn(
                 "w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed",
                 planMode
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-zinc-900 text-white"
                   : "text-zinc-800 hover:text-zinc-800 hover:bg-zinc-100"
               )}
             >
@@ -816,9 +816,9 @@ export function ChatInput({
                 onClick={handleSend}
                 disabled={!value.trim()}
                 aria-label="Send message"
-                className="w-9 h-9 bg-primary flex items-center justify-center rounded-xl text-white hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-9 h-9 bg-primary flex items-center justify-center rounded-xl hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <ArrowUp className="w-4 h-4" />
+                <ArrowUp className="w-4 h-4 text-zinc-900" />
               </button>
             )}
           </div>
