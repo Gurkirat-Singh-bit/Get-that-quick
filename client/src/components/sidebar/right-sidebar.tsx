@@ -193,7 +193,9 @@ function CategoryFolder({
                   ) : (
                     <FileCode2 className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
                   )}
-                  <span className="flex-1 min-w-0 text-[11px] text-zinc-300 group-hover:text-white truncate leading-snug">{t.title}</span>
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <span className="text-[11px] text-zinc-300 group-hover:text-white truncate block leading-snug">{t.title}</span>
+                  </div>
                   {source === "local" && (
                     <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                       {onEditTemplate && (
@@ -461,7 +463,9 @@ export function RightSidebar({
                           className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing"
                         >
                           <Globe className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
-                          <span className="flex-1 min-w-0 text-[11px] text-zinc-300 group-hover:text-white truncate leading-snug">{t.title}</span>
+                          <div className="flex-1 min-w-0 overflow-hidden">
+                            <span className="text-[11px] text-zinc-300 group-hover:text-white truncate block leading-snug">{t.title}</span>
+                          </div>
                         </div>
                       </TooltipTrigger>
                       {t.description && (
@@ -655,7 +659,9 @@ export function RightSidebar({
                           className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing"
                         >
                           <FileCode2 className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
-                          <span className="flex-1 min-w-0 text-[11px] text-zinc-300 group-hover:text-white truncate leading-snug">{t.title}</span>
+                          <div className="flex-1 min-w-0 overflow-hidden">
+                            <span className="text-[11px] text-zinc-300 group-hover:text-white truncate block leading-snug">{t.title}</span>
+                          </div>
                           <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                             {onEditTemplate && (
                               <button
