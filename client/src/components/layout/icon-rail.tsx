@@ -14,8 +14,8 @@
 import {
   MessagesSquare,
   FolderKanban,
+  Cog,
   Settings2,
-  SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -118,7 +118,7 @@ export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProje
                 : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
             )}
           >
-            <SlidersHorizontal className="w-4.5 h-4.5" />
+            <Settings2 className="w-4.5 h-4.5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>
@@ -133,7 +133,7 @@ export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProje
             onClick={onSettingsClick}
             className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-all"
           >
-            <Settings2 className="w-4.5 h-4.5" />
+            <Cog className="w-4.5 h-4.5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>

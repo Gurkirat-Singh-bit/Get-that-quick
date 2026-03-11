@@ -13,7 +13,6 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Search, FileCode2, Globe, Plus, Trash2, Sparkles, FolderOpen, LayoutGrid, Pencil, Tag, ChevronDown, ChevronRight, X, Folder, RefreshCw } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import type { TemplateMeta, Template } from "@shared/types";
 import type { TemplateFilter } from "@/components/layout/right-icon-rail";
@@ -193,9 +192,7 @@ function CategoryFolder({
                   ) : (
                     <FileCode2 className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
                   )}
-                  <div className="flex-1 min-w-0 overflow-hidden">
-                    <span className="text-[11px] text-zinc-300 group-hover:text-white truncate block leading-snug">{t.title}</span>
-                  </div>
+                  <span className="text-[11px] text-zinc-300 group-hover:text-white truncate flex-1 min-w-0 leading-snug">{t.title}</span>
                   {source === "local" && (
                     <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                       {onEditTemplate && (
@@ -404,7 +401,7 @@ export function RightSidebar({
         </div>
       </div>
 
-      <ScrollArea className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
         <div className="px-2 pb-4">
           {/* Community Templates */}
           {showCommunity && (
@@ -463,9 +460,7 @@ export function RightSidebar({
                           className="group w-full flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing overflow-hidden"
                         >
                           <Globe className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
-                          <div className="flex-1 min-w-0 overflow-hidden">
-                            <span className="text-[11px] text-zinc-300 group-hover:text-white truncate block leading-snug">{t.title}</span>
-                          </div>
+                          <span className="text-[11px] text-zinc-300 group-hover:text-white truncate flex-1 min-w-0 leading-snug">{t.title}</span>
                         </div>
                       </TooltipTrigger>
                       {t.description && (
@@ -659,9 +654,7 @@ export function RightSidebar({
                           className="group w-full flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing overflow-hidden"
                         >
                           <FileCode2 className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
-                          <div className="flex-1 min-w-0 overflow-hidden">
-                            <span className="text-[11px] text-zinc-300 group-hover:text-white truncate block leading-snug">{t.title}</span>
-                          </div>
+                          <span className="text-[11px] text-zinc-300 group-hover:text-white truncate flex-1 min-w-0 leading-snug">{t.title}</span>
                           <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                             {onEditTemplate && (
                               <button
@@ -694,7 +687,7 @@ export function RightSidebar({
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
     </TooltipProvider>
   );
