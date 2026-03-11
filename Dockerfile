@@ -31,12 +31,12 @@ RUN cd /app/client && bunx --bun vite build
 FROM oven/bun:1.2-slim AS runtime
 
 # Install runtime dependencies:
-#   git    — community template sync (git clone)
-#   curl   — healthcheck
-#   unzip  — Vosk model extraction
-#   libvosk — Vosk speech-to-text (optional, STT won't work without it)
+#   ca-certificates — HTTPS support for git clone & wget (community templates, Vosk download)
+#   git             — community template sync (git clone)
+#   curl            — healthcheck
+#   unzip           — Vosk model extraction
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends git curl unzip && \
+    apt-get install -y --no-install-recommends ca-certificates git curl unzip && \
     rm -rf /var/lib/apt/lists/*
 
 # Try to install libvosk (optional — STT only)
