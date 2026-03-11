@@ -16,7 +16,7 @@ import {
   Globe,
   FolderOpen,
   FilePlus2,
-  Download,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -132,14 +132,19 @@ export function RightIconRail({
 
       <div className="flex-1" />
 
-      {/* Import */}
+      {/* Docs */}
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
-          <button className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-all">
-            <Download className="w-4.5 h-4.5" />
-          </button>
+          <a
+            href="https://gurkirat-singh-bit.github.io/Get-that-quick/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-all"
+          >
+            <BookOpen className="w-4.5 h-4.5" />
+          </a>
         </TooltipTrigger>
-        <TooltipContent side="left" sideOffset={10}>Import Templates</TooltipContent>
+        <TooltipContent side="left" sideOffset={10}>Documentation</TooltipContent>
       </Tooltip>
     </aside>
   );

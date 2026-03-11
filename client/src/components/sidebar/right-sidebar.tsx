@@ -185,7 +185,7 @@ function CategoryFolder({
                     e.dataTransfer.setData("application/gtq-template", t.id);
                     e.dataTransfer.effectAllowed = "copy";
                   }}
-                  className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing"
+                  className="group w-full flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing overflow-hidden"
                   style={{ paddingLeft: `${24 + depth * 12}px` }}
                 >
                   {source === "community" ? (
@@ -460,7 +460,7 @@ export function RightSidebar({
                             e.dataTransfer.setData("application/gtq-template", t.id);
                             e.dataTransfer.effectAllowed = "copy";
                           }}
-                          className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing"
+                          className="group w-full flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing overflow-hidden"
                         >
                           <Globe className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
                           <div className="flex-1 min-w-0 overflow-hidden">
@@ -656,7 +656,7 @@ export function RightSidebar({
                             e.dataTransfer.setData("application/gtq-template", t.id);
                             e.dataTransfer.effectAllowed = "copy";
                           }}
-                          className="group flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing"
+                          className="group w-full flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/4 transition-colors cursor-grab active:cursor-grabbing overflow-hidden"
                         >
                           <FileCode2 className="w-3 h-3 text-zinc-600 group-hover:text-primary/70 shrink-0" />
                           <div className="flex-1 min-w-0 overflow-hidden">
