@@ -8,10 +8,34 @@ title: Getting Started
 ## Prerequisites
 
 - **Docker** and **Docker Compose** (for production)
-- **Bun 1.2+** (for local development)
-- An LLM API key (OpenRouter, OpenAI, or local Ollama)
+- **Bun 1.2+** (for local development only)
+- An LLM API key (OpenRouter, OpenAI, Ollama, or use [GitHub Copilot](./guides/github-copilot.md) for free)
 
-## Quick Start (Docker)
+---
+
+## One-liner Install (recommended)
+
+The fastest way to get running. Each script checks for git and Docker, installs them if missing, clones the repo, and starts the app.
+
+### Linux / macOS
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Gurkirat-Singh-bit/Get-that-quick/main/install.sh | sh
+```
+
+### Windows (PowerShell — run as Administrator)
+
+```powershell
+irm https://raw.githubusercontent.com/Gurkirat-Singh-bit/Get-that-quick/main/install.ps1 | iex
+```
+
+Both scripts install to `~/GetThatQuick` and expose the app at **http://localhost:12233**.
+
+---
+
+## Manual Install (Docker Compose)
+
+If you prefer step-by-step control:
 
 ```bash
 git clone https://github.com/Gurkirat-Singh-bit/Get-that-quick.git
@@ -34,6 +58,8 @@ All persistent data is stored at `~/getthatquick/` on your host machine:
     └── settings.json  # App configuration
 ```
 
+---
+
 ## Development Setup
 
 ### 1. Clone & Install
@@ -42,10 +68,7 @@ All persistent data is stored at `~/getthatquick/` on your host machine:
 git clone https://github.com/Gurkirat-Singh-bit/Get-that-quick.git
 cd Get-that-quick
 
-# Install server dependencies
 cd server && bun install
-
-# Install client dependencies
 cd ../client && bun install
 ```
 
@@ -70,7 +93,7 @@ The Vite dev server proxies `/api` and `/ws` requests to `localhost:3000`.
 On first launch, the **Onboarding Wizard** will guide you through:
 
 1. **Welcome** — Overview of features
-2. **Voice Model** — Download a Vosk STT model (optional, skip if you don't need voice)
+2. **Voice Model** — Download a Vosk STT model (optional — skip if not needed)
 3. **LLM Provider** — Select and configure your AI provider
 4. **API Keys** — Enter API keys for your chosen provider
 5. **Done** — Review your configuration
@@ -83,7 +106,10 @@ On first launch, the **Onboarding Wizard** will guide you through:
 | **OpenAI** | `https://api.openai.com/v1` | Direct OpenAI access |
 | **Ollama** | `http://localhost:11434/v1` | Local models, no API key needed |
 | **LM Studio** | `http://localhost:1234/v1` | Local models, no API key needed |
+| **GitHub Copilot** | (auto) | Free for students — see [guide](./guides/github-copilot.md) |
 | **Custom** | Any OpenAI-compatible URL | Works with any compatible endpoint |
+
+---
 
 ## Build for Production
 
@@ -94,6 +120,8 @@ cd client && bun run build
 # The server serves the built client from client/dist/
 cd ../server && bun run start
 ```
+
+---
 
 ## Docker Configuration
 

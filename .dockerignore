@@ -29,5 +29,6 @@ Thumbs.db
 
 # Docs
 docs/
+docs-site/
 *.md
 !server/seed/*.md

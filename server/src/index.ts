@@ -178,6 +178,20 @@ app.use("/fonts/*", async (c, next) => {
   return next();
 });
 
+// Root-level static files (favicon, icons, images from public/)
+app.use("/*", async (c, next) => {
+  const path = new URL(c.req.url).pathname;
+  // Only try static files if path has a file extension
+  if (path.includes(".")) {
+    const filePath = join(CLIENT_DIST, path);
+    const file = Bun.file(filePath);
+    if (await file.exists()) {
+      return new Response(file);
+    }
+  }
+  return next();
+});
+
 // SPA fallback — serve index.html for all non-API/non-WS routes
 app.get("*", async (c) => {
   const indexPath = join(CLIENT_DIST, "index.html");
