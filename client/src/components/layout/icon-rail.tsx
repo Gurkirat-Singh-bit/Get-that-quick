@@ -11,12 +11,6 @@
  * @updated 2026-03-03
  */
 
-import {
-  MessagesSquare,
-  FolderKanban,
-  Cog,
-  Settings2,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -24,6 +18,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { GtqIcon } from "@/components/brand/gtq-icon";
+import { LineIcon } from "@/components/icons/line-icon";
 
 /** Props accepted by {@link IconRail}. */
 interface IconRailProps {
@@ -49,8 +44,15 @@ interface IconRailProps {
  * @param props - {@link IconRailProps}
  */
 export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProjects, onSettingsClick, configOpen, onToggleConfig }: IconRailProps) {
+  const itemClass = (active?: boolean) => cn(
+    "w-9 h-9 flex items-center justify-center rounded-xl transition-colors border",
+    active
+      ? "border-white/10 bg-white/8 text-zinc-100"
+      : "border-transparent text-zinc-500 hover:text-zinc-200 hover:bg-white/5"
+  );
+
   return (
-    <aside className="w-14 flex flex-col items-center py-5 gap-1.5 shrink-0 bg-background-dark">
+    <aside className="w-14 flex flex-col items-center py-5 gap-1.5 shrink-0 bg-[#07080B] border-r border-white/[0.06]">
       {/* Logo */}
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
@@ -68,14 +70,9 @@ export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProje
         <TooltipTrigger asChild>
           <button
             onClick={onToggleChats}
-            className={cn(
-              "w-9 h-9 flex items-center justify-center rounded-xl transition-all",
-              chatsOpen
-                ? "bg-white/10 text-white"
-                : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
-            )}
+            className={itemClass(chatsOpen)}
           >
-            <MessagesSquare className="w-4.5 h-4.5" />
+            <LineIcon name="chat" className="w-5 h-5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>
@@ -88,14 +85,9 @@ export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProje
         <TooltipTrigger asChild>
           <button
             onClick={onToggleProjects}
-            className={cn(
-              "w-9 h-9 flex items-center justify-center rounded-xl transition-all",
-              projectsOpen
-                ? "bg-white/10 text-white"
-                : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
-            )}
+            className={itemClass(projectsOpen)}
           >
-            <FolderKanban className="w-4.5 h-4.5" />
+            <LineIcon name="projects" className="w-5 h-5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>
@@ -111,14 +103,9 @@ export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProje
         <TooltipTrigger asChild>
           <button
             onClick={onToggleConfig}
-            className={cn(
-              "w-9 h-9 flex items-center justify-center rounded-xl transition-all",
-              configOpen
-                ? "bg-white/10 text-white"
-                : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
-            )}
+            className={itemClass(configOpen)}
           >
-            <Settings2 className="w-4.5 h-4.5" />
+            <LineIcon name="config" className="w-5 h-5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>
@@ -131,15 +118,16 @@ export function IconRail({ chatsOpen, projectsOpen, onToggleChats, onToggleProje
         <TooltipTrigger asChild>
           <button
             onClick={onSettingsClick}
-            className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-all"
+            className={itemClass(false)}
           >
-            <Cog className="w-4.5 h-4.5" />
+            <LineIcon name="settings" className="w-5 h-5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>
           Settings
         </TooltipContent>
       </Tooltip>
+
     </aside>
   );
 }

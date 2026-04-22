@@ -9,6 +9,8 @@
 # ── Stage 1: Build ─────────────────────────────────────────────────────────
 FROM oven/bun:1.2 AS build
 
+ARG APP_VERSION=1.1.0
+
 WORKDIR /app
 
 # Copy package manifests first for layer caching
@@ -25,10 +27,13 @@ COPY client/ client/
 COPY server/ server/
 
 # Build the React client
+ENV VITE_APP_VERSION=$APP_VERSION
 RUN cd /app/client && bunx --bun vite build
 
 # ── Stage 2: Runtime ───────────────────────────────────────────────────────
 FROM oven/bun:1.2-slim AS runtime
+
+ARG APP_VERSION=1.1.0
 
 # Install runtime dependencies:
 #   ca-certificates — HTTPS support for git clone & wget (community templates, Vosk download)
@@ -65,6 +70,7 @@ RUN cd /app/server && bun install --production
 
 # Data directory — mount a volume or bind-mount here for persistence
 ENV DATA_DIR=/data
+ENV APP_VERSION=$APP_VERSION
 RUN mkdir -p /data
 
 # Expose the server port

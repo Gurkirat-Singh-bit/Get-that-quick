@@ -146,11 +146,13 @@ export function getSession(id: string): Promise<Session> {
  * @param opts        - Optional creation parameters.
  * @param opts.title  - Display title; defaults to "New Chat" on the server.
  * @param opts.templateId - Optional template to pre-load as system prompt.
+ * @param opts.templateIds - Optional templates to layer into the chat context.
  * @returns The newly created {@link Session}.
  */
 export function createSession(opts: {
   title?: string;
   templateId?: string;
+  templateIds?: string[];
 } = {}): Promise<Session> {
   return request<Session>("/sessions", {
     method: "POST",

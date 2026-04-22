@@ -15,6 +15,104 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { Session, SessionMeta, Message, Settings, AttachedDocument } from "@shared/types";
 import * as api from "@/api/client";
 
+const TITLE_PREFIX_PATTERNS = [
+  /^(please\s+)?(can|could|would|will)\s+you\s+/i,
+  /^i\s+(want|need|would like)\s+(you\s+)?to\s+/i,
+  /^i\s+(want|need|would like)\s+/i,
+  /^help\s+(me\s+)?(with|make|create|build|find|debug|fix|write|draft|improve)?\s*/i,
+  /^get\s+that\s+quick[,.]?\s*/i,
+];
+
+const TITLE_STOP_WORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "by",
+  "for",
+  "from",
+  "in",
+  "into",
+  "is",
+  "it",
+  "me",
+  "my",
+  "of",
+  "on",
+  "or",
+  "that",
+  "the",
+  "this",
+  "to",
+  "with",
+  "you",
+  "your",
+]);
+
+const TITLE_WORD_FIXES: Record<string, string> = {
+  ai: "AI",
+  api: "API",
+  css: "CSS",
+  html: "HTML",
+  js: "JS",
+  mcp: "MCP",
+  prd: "PRD",
+  ui: "UI",
+  ux: "UX",
+  desgin: "Design",
+};
+
+function titleCaseWord(word: string): string {
+  const fixed = TITLE_WORD_FIXES[word.toLowerCase()];
+  if (fixed) return fixed;
+  return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+}
+
+function makeShortSessionTitle(content: string): string {
+  let cleaned = content
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/https?:\/\/\S+/g, " ")
+    .replace(/[*_`#>\[\]{}()]/g, " ")
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  for (const pattern of TITLE_PREFIX_PATTERNS) {
+    cleaned = cleaned.replace(pattern, "").trim();
+  }
+
+  const words = cleaned
+    .split(" ")
+    .map((word) => word.replace(/^-+|-+$/g, ""))
+    .filter(Boolean);
+
+  const meaningful = words.filter((word) => {
+    const lower = word.toLowerCase();
+    return lower.length > 2 && !TITLE_STOP_WORDS.has(lower);
+  });
+
+  const selected = (meaningful.length >= 2 ? meaningful : words).slice(0, 4);
+  if (selected.length === 0) return "New Chat";
+
+  const title = selected.map(titleCaseWord).join(" ");
+  return title.length > 44 ? `${title.slice(0, 41).trim()}...` : title;
+}
+
+function sanitizeGeneratedTitle(raw: string, fallbackContent: string): string {
+  const cleaned = raw
+    .replace(/^["'`]+|["'`.]+$/g, "")
+    .replace(/^title:\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const words = cleaned.split(" ").filter(Boolean).slice(0, 6);
+  if (words.length >= 2) return words.join(" ");
+  return makeShortSessionTitle(fallbackContent);
+}
+
 /** Return type of {@link useSessions}. */
 export interface UseSessionsReturn {
   sessions: SessionMeta[];
@@ -22,6 +120,8 @@ export interface UseSessionsReturn {
   loading: boolean;
   selectSession: (id: string) => Promise<void>;
   createSession: (title?: string, templateId?: string) => Promise<Session>;
+  /** Add a template to the current chat without creating a new session. */
+  applyTemplateToActiveSession: (templateId: string) => Promise<Session | null>;
   deleteSession: (id: string) => Promise<void>;
   renameSession: (id: string, title: string) => Promise<void>;
   sendMessage: (content: string) => Promise<void>;
@@ -115,7 +215,11 @@ export function useSessions(): UseSessionsReturn {
    */
   const createSession = useCallback(
     async (title?: string, templateId?: string) => {
-      const session = await api.createSession({ title, templateId });
+      const session = await api.createSession({
+        title,
+        templateId,
+        templateIds: templateId ? [templateId] : undefined,
+      });
       activeSessionRef.current = session; // Update ref immediately for race-free sendMessage
       setActiveSession(session);
       await refresh();
@@ -176,16 +280,29 @@ You're running locally. Be direct and technical.`;
   /** Get the system prompt — from settings, template, or default. Injects document context and plan mode. */
   const getSystemPrompt = useCallback(
     async (session: Session): Promise<string> => {
-      let base: string;
-      if (session.templateId) {
-        try {
-          const tmpl = await api.getTemplate(session.templateId);
-          base = tmpl.content;
-        } catch {
-          base = settingsRef.current?.ai?.systemPrompt || DEFAULT_SYSTEM_PROMPT;
+      let base = settingsRef.current?.ai?.systemPrompt || DEFAULT_SYSTEM_PROMPT;
+      const templateIds = Array.from(new Set([
+        ...(session.templateId ? [session.templateId] : []),
+        ...(session.templateIds ?? []),
+      ]));
+
+      if (templateIds.length > 0) {
+        const templates = await Promise.all(
+          templateIds.map(async (id) => {
+            try {
+              return await api.getTemplate(id);
+            } catch {
+              return null;
+            }
+          }),
+        );
+        const applied = templates.filter((tmpl): tmpl is NonNullable<typeof tmpl> => Boolean(tmpl));
+        if (applied.length > 0) {
+          base += "\n\n## Applied Template Context\nUse these templates as layered instructions for this chat. Later user messages can add more templates; combine them with the conversation instead of replacing prior context.\n";
+          for (const tmpl of applied) {
+            base += `\n### ${tmpl.title}\n${tmpl.content}\n`;
+          }
         }
-      } else {
-        base = settingsRef.current?.ai?.systemPrompt || DEFAULT_SYSTEM_PROMPT;
       }
 
       // Inject plan mode instructions
@@ -240,26 +357,36 @@ Your question text here?
     []
   );
 
-  /**
-   * Derive a short title from the first user message — instant, no LLM call.
-   * Takes up to 7 words from the message and capitalises the first letter.
-   */
+  /** Ask the active LLM for a short ChatGPT-style title, with a local fallback. */
   const autoNameSession = useCallback(
     async (sessionId: string, messages: Message[]) => {
       try {
         const firstUser = messages.find((m) => m.role === "user");
         if (!firstUser) return;
-        // Strip markdown, newlines, extra whitespace then take first 7 words
-        const stripped = firstUser.content
-          .replace(/[*_`#>\[\]]/g, "")
-          .replace(/\s+/g, " ")
-          .trim();
-        const words = stripped.split(" ").slice(0, 7);
-        const title = words.join(" ") + (stripped.split(" ").length > 7 ? "…" : "");
-        const clean = title.charAt(0).toUpperCase() + title.slice(1);
-        if (clean.length > 0) {
-          await api.updateSession(sessionId, { title: clean } as Partial<Session>);
-          setActiveSession((prev) => (prev?.id === sessionId ? { ...prev, title: clean } : prev));
+        let title = makeShortSessionTitle(firstUser.content);
+
+        try {
+          const generated = await api.generate({
+            systemPrompt:
+              "Name this chat in 3-6 words. Return only the title. No quotes, no punctuation, no explanation.",
+            messages: [
+              {
+                role: "user",
+                content: firstUser.content.slice(0, 1600),
+              },
+            ],
+            temperature: 0.2,
+            maxTokens: 18,
+            thinkingEnabled: false,
+          });
+          title = sanitizeGeneratedTitle(generated, firstUser.content);
+        } catch (err) {
+          console.warn("[useSessions] LLM title generation failed:", err);
+        }
+
+        if (title.length > 0) {
+          await api.updateSession(sessionId, { title } as Partial<Session>);
+          setActiveSession((prev) => (prev?.id === sessionId ? { ...prev, title } : prev));
           await refresh();
         }
       } catch (err) {
@@ -525,6 +652,36 @@ Your question text here?
   );
 
   /**
+   * Layer a template into the active chat context.
+   * Creates a chat only when there is no active session yet.
+   */
+  const applyTemplateToActiveSession = useCallback(
+    async (templateId: string): Promise<Session | null> => {
+      const session = activeSessionRef.current;
+      if (!session) {
+        return createSession(undefined, templateId);
+      }
+
+      const templateIds = Array.from(new Set([
+        ...(session.templateId ? [session.templateId] : []),
+        ...(session.templateIds ?? []),
+        templateId,
+      ]));
+
+      const updated = await api.updateSession(session.id, {
+        templateId: templateIds[0] ?? null,
+        templateIds,
+      } as Partial<Session>);
+
+      activeSessionRef.current = updated;
+      setActiveSession(updated);
+      await refresh();
+      return updated;
+    },
+    [createSession, refresh],
+  );
+
+  /**
    * Edit a message's content. Updates local + server state.
    * If a user message is edited, removes all messages after it
    * and re-sends to get a new assistant response.
@@ -629,6 +786,7 @@ Your question text here?
     loading,
     selectSession,
     createSession,
+    applyTemplateToActiveSession,
     deleteSession,
     renameSession,
     sendMessage,

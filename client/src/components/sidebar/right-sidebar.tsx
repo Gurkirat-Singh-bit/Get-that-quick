@@ -361,7 +361,7 @@ export function RightSidebar({
 
   return (
     <TooltipProvider delayDuration={400}>
-    <div className="w-full h-full flex flex-col bg-[#0E0E10] text-zinc-300 border-l border-[#1A1A1E]">
+    <div className="w-full h-full flex flex-col bg-[#090A0F] text-zinc-300 border-l border-white/[0.06]">
       {/* Header */}
       <div className="px-4 pt-4 pb-1 shrink-0">
         <div className="flex items-center gap-2 mb-3">
@@ -381,7 +381,7 @@ export function RightSidebar({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search templates..."
-            className="w-full bg-background-dark border border-[#1A1A1E] rounded-lg py-2 pl-8 pr-3 text-xs text-zinc-300 placeholder:text-zinc-600 focus:ring-1 focus:ring-primary/30 focus:border-primary/30 transition-all outline-none"
+            className="w-full bg-[#050609] border border-white/[0.08] rounded-lg py-2 pl-8 pr-3 text-xs text-zinc-300 placeholder:text-zinc-600 focus:ring-1 focus:ring-primary/30 focus:border-primary/40 transition-all outline-none"
           />
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-600 w-3.5 h-3.5" />
         </div>
@@ -390,11 +390,11 @@ export function RightSidebar({
       {/* Quick Stats */}
       <div className="px-3 pb-2 shrink-0">
         <div className="flex gap-2">
-          <div className="flex-1 bg-background-dark border border-[#1A1A1E] rounded-lg px-3 py-2 text-center">
+          <div className="flex-1 bg-[#050609] border border-white/[0.08] rounded-lg px-3 py-2 text-center">
             <p className="text-sm font-bold text-zinc-200">{community.length}</p>
             <p className="text-[9px] text-zinc-500 uppercase tracking-wide">Community</p>
           </div>
-          <div className="flex-1 bg-background-dark border border-[#1A1A1E] rounded-lg px-3 py-2 text-center">
+          <div className="flex-1 bg-[#050609] border border-white/[0.08] rounded-lg px-3 py-2 text-center">
             <p className="text-sm font-bold text-zinc-200">{local.length}</p>
             <p className="text-[9px] text-zinc-500 uppercase tracking-wide">Mine</p>
           </div>

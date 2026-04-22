@@ -1,6 +1,6 @@
 {
   "name": "getthatquick-server",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "dev": "bun --watch src/index.ts",
@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "gray-matter": "^4.0.3",
-    "hono": "^4.7.0",
+    "hono": "^4.12.14",
     "nanoid": "^5.1.0",
     "openai": "^4.82.0",
     "zod": "^3.24.0"

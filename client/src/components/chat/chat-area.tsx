@@ -19,6 +19,7 @@ import type { PlanQuestion } from "@/components/chat/message";
 import { ChatInput } from "@/components/chat/chat-input";
 import type { Session, Settings, AttachedDocument } from "@shared/types";
 import { GtqIcon } from "@/components/brand/gtq-icon";
+import { PROJECT_VERSION } from "@/lib/project-meta";
 
 /** Props accepted by {@link ChatArea}. */
 interface ChatAreaProps {
@@ -54,8 +55,8 @@ interface ChatAreaProps {
   onDeleteMessage?: (messageId: string) => void;
   /** Apply a template by starting a new session with it. */
   onApplyTemplate?: (templateId: string) => void;
-  /** Name of the active template (resolved from templateId). */
-  activeTemplateName?: string | null;
+  /** Names of templates layered into this chat context. */
+  activeTemplateNames?: string[];
   /** Stop an in-progress generation. */
   onStop?: () => void;
 }
@@ -82,7 +83,7 @@ export function ChatArea({
   onEditMessage,
   onDeleteMessage,
   onApplyTemplate,
-  activeTemplateName,
+  activeTemplateNames = [],
   onStop,
 }: ChatAreaProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -181,21 +182,44 @@ export function ChatArea({
         <div className="absolute inset-0 z-20 bg-primary/5 flex items-center justify-center pointer-events-none">
           <div className="flex flex-col items-center gap-2 bg-white rounded-2xl px-8 py-6 shadow-lg border border-primary/20">
             <LayoutTemplate className="w-8 h-8 text-primary" />
-            <p className="text-sm font-semibold text-zinc-700">Drop to start chat with template</p>
+            <p className="text-sm font-semibold text-zinc-700">Drop to add template context</p>
           </div>
         </div>
       )}
 
       {/* Top bar */}
       <div className="flex items-center gap-2 px-6 py-3 border-b border-[#E2E4E9] shrink-0 min-w-0 overflow-hidden">
-        <h1 className="text-base font-bold tracking-tight text-zinc-800 truncate min-w-0 flex-1">
-          {session?.title ?? "New Chat"}
-        </h1>
-        {activeTemplateName && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium shrink-0">
-            <LayoutTemplate className="w-3 h-3" />
-            {activeTemplateName}
+        <div className="min-w-0 flex-1">
+          <h1 className="text-base font-bold tracking-tight text-zinc-800 truncate min-w-0">
+            {session?.title ?? "New Chat"}
+          </h1>
+        </div>
+        <div className="flex justify-center shrink-0">
+          <span className="rounded-full border border-[#D7DAE1] bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+            v{PROJECT_VERSION}
           </span>
+        </div>
+        {activeTemplateNames.length > 0 && (
+          <div className="flex items-center gap-1.5 shrink-0 min-w-0 max-w-[52%] overflow-hidden">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-primary/25 bg-primary/10 text-primary text-[11px] font-medium shrink-0">
+              <LayoutTemplate className="w-3 h-3" />
+              Context
+            </span>
+            {activeTemplateNames.slice(0, 2).map((name) => (
+              <span
+                key={name}
+                title={name}
+                className="min-w-0 truncate px-2 py-0.5 rounded-full border border-[#D7DAE1] bg-white text-[11px] font-medium text-zinc-600"
+              >
+                {name}
+              </span>
+            ))}
+            {activeTemplateNames.length > 2 && (
+              <span className="px-2 py-0.5 rounded-full bg-zinc-100 text-[11px] font-medium text-zinc-500 shrink-0">
+                +{activeTemplateNames.length - 2}
+              </span>
+            )}
+          </div>
         )}
       </div>
 
@@ -213,8 +237,8 @@ export function ChatArea({
             </div>
             <h2 className="text-lg font-bold text-zinc-800 mb-1">GetThatQuick</h2>
             <p className="text-sm text-zinc-500 max-w-sm mb-6">
-              {activeTemplateName
-                ? <>Template <strong>{activeTemplateName}</strong> loaded — type a message to begin.</>
+              {activeTemplateNames.length > 0
+                ? <>{activeTemplateNames.length} template{activeTemplateNames.length !== 1 ? "s" : ""} layered into context — type a message to begin.</>
                 : "Your self-hosted prompt workbench. Type a message to start a new conversation."
               }
             </p>

@@ -66,7 +66,7 @@ function ResizeHandle({ onMouseDown }: { onMouseDown: (e: React.MouseEvent<HTMLD
  * Manages panel visibility, hooks into session/template APIs,
  * and delegates rendering to specialised child components.
  */
-const PROJECT_COLORS = ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#f97316"];
+const PROJECT_COLORS = ["#67E8F9", "#A78BFA", "#34D399", "#FBBF24", "#F472B6", "#60A5FA", "#F87171", "#C4B5FD"];
 const PROJECTS_STORAGE_KEY = "gtq_projects";
 
 /** Load projects from localStorage. */
@@ -200,13 +200,17 @@ export function Dashboard() {
     [leftSidebarWidth, rightSidebarWidth],
   );
 
-  /** Resolve the active template name from the session's templateId. */
-  const activeTemplateName = useMemo(() => {
-    const tid = sessionHook.activeSession?.templateId;
-    if (!tid) return null;
+  /** Resolve the template names currently layered into the active chat. */
+  const activeTemplateNames = useMemo(() => {
+    const session = sessionHook.activeSession;
+    const ids = Array.from(new Set([
+      ...(session?.templateId ? [session.templateId] : []),
+      ...(session?.templateIds ?? []),
+    ]));
+    if (ids.length === 0) return [];
     const all = [...templateHook.community, ...templateHook.local];
-    return all.find((t) => t.id === tid)?.title ?? tid;
-  }, [sessionHook.activeSession?.templateId, templateHook.community, templateHook.local]);
+    return ids.map((id) => all.find((t) => t.id === id)?.title ?? id);
+  }, [sessionHook.activeSession?.templateId, sessionHook.activeSession?.templateIds, templateHook.community, templateHook.local]);
 
   /** Toggle a side panel open/closed. */
   const togglePanel = useCallback((side: "left" | "right") => {
@@ -296,7 +300,7 @@ export function Dashboard() {
 
   return (
     <TooltipProvider>
-      <div className="h-screen w-screen bg-background-dark flex overflow-hidden">
+      <div className="h-screen w-screen bg-[#07080B] flex overflow-hidden">
         {/* Left icon rail — view toggles and settings */}
         <IconRail
           chatsOpen={panels.left && leftMode === "chats" && !configPanelOpen}
@@ -377,9 +381,9 @@ export function Dashboard() {
               setEditingTemplateId(tmpl.id);
             }}
             onApplyTemplate={async (templateId) => {
-              await sessionHook.createSession(undefined, templateId);
+              await sessionHook.applyTemplateToActiveSession(templateId);
             }}
-            activeTemplateName={activeTemplateName}
+            activeTemplateNames={activeTemplateNames}
           />
         </main>
 

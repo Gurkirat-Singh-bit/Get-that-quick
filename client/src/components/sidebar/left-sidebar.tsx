@@ -119,8 +119,9 @@ function SessionRow({
       draggable={!editing}
       onDragStart={handleDragStart}
       onClick={() => { if (!editing) onSelect(); }}
+      title={!editing ? session.title : undefined}
       className={cn(
-        "group w-full px-3 py-2 rounded-lg text-left transition-colors flex items-center gap-2",
+        "group relative w-full min-w-0 overflow-hidden px-3 py-2 rounded-lg text-left transition-colors flex items-center gap-2",
         editing ? "bg-white/8" : "cursor-grab active:cursor-grabbing",
         isActive
           ? "bg-white/8 text-white"
@@ -132,7 +133,7 @@ function SessionRow({
         editing ? "opacity-0" : "opacity-0 group-hover:opacity-100"
       )} />
 
-      <div className="flex-1 min-w-0">
+      <div className={cn("flex-1 min-w-0", !editing && "pr-9")}>
         {editing ? (
           <div className="flex items-center gap-1">
             <input
@@ -166,11 +167,11 @@ function SessionRow({
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between mb-0.5 min-w-0 overflow-hidden">
-              <span className="text-xs font-medium truncate min-w-0 flex-1 pr-1">{session.title}</span>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 mb-0.5 min-w-0 overflow-hidden">
+              <span className="block min-w-0 truncate text-xs font-medium">{session.title}</span>
               <span className="text-[10px] text-zinc-600 shrink-0 ml-1">{timeAgo(session.updatedAt)}</span>
             </div>
-            <p className="text-[11px] text-zinc-500 truncate">
+            <p className="block min-w-0 truncate text-[11px] text-zinc-500">
               {session.messageCount} message{session.messageCount !== 1 ? "s" : ""}
             </p>
           </>
@@ -178,10 +179,10 @@ function SessionRow({
       </div>
 
       {!editing && (
-        <>
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
           <button
             onClick={(e) => { e.stopPropagation(); setEditing(true); setEditValue(session.title); }}
-            className="w-4 h-4 flex items-center justify-center rounded text-zinc-700 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            className="w-4 h-4 flex items-center justify-center rounded text-zinc-700 hover:text-primary shrink-0"
             title="Rename chat"
             aria-label="Rename chat"
           >
@@ -189,13 +190,13 @@ function SessionRow({
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="w-5 h-5 flex items-center justify-center rounded text-zinc-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            className="w-5 h-5 flex items-center justify-center rounded text-zinc-700 hover:text-red-400 shrink-0"
             title="Delete chat"
             aria-label="Delete chat"
           >
             <Trash2 className="w-3 h-3" />
           </button>
-        </>
+        </div>
       )}
     </div>
   );
@@ -271,7 +272,7 @@ export function LeftSidebar({
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#0E0E10] text-zinc-300 border-r border-[#1A1A1E]">
+    <div className="w-full h-full flex flex-col bg-[#090A0F] text-zinc-300 border-r border-white/[0.06]">
       {/* Brand header — full logo with wordmark */}
       <div className="px-3 pt-3.5 pb-1 shrink-0 flex items-center justify-between">
         <GtqLogo iconSize={22} />
@@ -288,7 +289,7 @@ export function LeftSidebar({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search chats..."
-            className="w-full bg-background-dark border border-[#1A1A1E] rounded-lg py-2 pl-8 pr-3 text-xs text-zinc-300 placeholder:text-zinc-600 focus:ring-1 focus:ring-primary/30 focus:border-primary/30 transition-all outline-none"
+            className="w-full bg-[#050609] border border-white/[0.08] rounded-lg py-2 pl-8 pr-3 text-xs text-zinc-300 placeholder:text-zinc-600 focus:ring-1 focus:ring-primary/30 focus:border-primary/40 transition-all outline-none"
           />
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-600 w-3.5 h-3.5" />
         </div>
@@ -461,7 +462,9 @@ export function LeftSidebar({
                           />
                         </div>
                       ) : (
-                        <span className="text-[11px] font-medium text-zinc-300 flex-1 truncate">{project.name}</span>
+                        <span className="block min-w-0 text-[11px] font-medium text-zinc-300 flex-1 truncate" title={project.name}>
+                          {project.name}
+                        </span>
                       )}
 
                       <span className="text-[9px] text-zinc-600">{projectSessions.length}</span>

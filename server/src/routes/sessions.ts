@@ -46,16 +46,21 @@ sessions.get("/:id", (c) => {
  * `POST /api/sessions`
  *
  * Creates a new empty session.
- * Accepts an optional `title` and `templateId` in the request body.
+ * Accepts an optional `title`, `templateId`, and `templateIds` in the request body.
  */
 sessions.post("/", async (c) => {
-  const body = await c.req.json<{ title?: string; templateId?: string }>();
+  const body = await c.req.json<{ title?: string; templateId?: string; templateIds?: string[] }>();
   const now = new Date().toISOString();
+  const templateIds = Array.from(new Set([
+    ...(body.templateId ? [body.templateId] : []),
+    ...(body.templateIds ?? []),
+  ]));
 
   const session: Session = {
     id: `sess_${nanoid(12)}`,
     title: body.title ?? "New Session",
-    templateId: body.templateId ?? null,
+    templateId: templateIds[0] ?? null,
+    templateIds,
     projectId: null,
     createdAt: now,
     updatedAt: now,

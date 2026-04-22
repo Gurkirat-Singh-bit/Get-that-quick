@@ -45,6 +45,7 @@ export function listSessions(): SessionMeta[] {
         id: s.id,
         title: s.title,
         templateId: s.templateId,
+        templateIds: s.templateIds ?? (s.templateId ? [s.templateId] : []),
         projectId: s.projectId ?? null,
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
@@ -71,7 +72,12 @@ export function getSession(id: string): Session | null {
   const path = sessionPath(id);
   if (!existsSync(path)) return null;
   try {
-    return JSON.parse(readFileSync(path, "utf-8"));
+    const session: Session = JSON.parse(readFileSync(path, "utf-8"));
+    return {
+      ...session,
+      templateIds: session.templateIds ?? (session.templateId ? [session.templateId] : []),
+      projectId: session.projectId ?? null,
+    };
   } catch {
     return null;
   }
@@ -112,6 +118,8 @@ export function updateSession(
     ...existing,
     ...updates,
     id, // never overwrite ID
+    templateId: updates.templateId ?? updates.templateIds?.[0] ?? existing.templateId ?? null,
+    templateIds: updates.templateIds ?? existing.templateIds ?? (existing.templateId ? [existing.templateId] : []),
     updatedAt: new Date().toISOString(),
   };
 

@@ -521,12 +521,12 @@ export function ChatInput({
 
   return (
     <div
-      className="px-6 py-4 shrink-0"
+      className="px-6 py-4 shrink-0 min-w-0"
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={() => setIsFocused(false)}
     >
-      <div className="max-w-3xl mx-auto">
+      <div className="w-full max-w-3xl mx-auto min-w-0">
         {/* Attached documents pills */}
         {documents.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2">
@@ -678,7 +678,7 @@ export function ChatInput({
              controls each carry their own `disabled` attribute. */}
         <div
           className={cn(
-            "bg-white rounded-2xl border border-[#E2E4E9] p-1.5 pl-3 flex items-end gap-2 transition-all shadow-sm",
+            "bg-white rounded-2xl border border-[#E2E4E9] p-1.5 pl-3 flex items-end gap-2 transition-all shadow-sm min-w-0 overflow-hidden",
             isFocused && "ring-2 ring-primary/50 border-primary/60"
           )}
         >
@@ -739,8 +739,9 @@ export function ChatInput({
               placeholder="Type your prompt..."
               disabled={disabled}
               rows={1}
+              wrap="soft"
               aria-label="Message input"
-              className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-sm py-3 text-zinc-800 placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-50 resize-none leading-6 overflow-y-auto"
+              className="flex-1 min-w-0 w-full bg-transparent border-none focus:ring-0 focus:outline-none text-sm py-3 text-zinc-800 placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-50 resize-none leading-6 overflow-y-auto break-words"
               style={{ maxHeight: 120 }}
             />
           )}

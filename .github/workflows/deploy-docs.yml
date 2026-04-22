@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'docs-site/**'
+      - 'package.json'
+      - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
 permissions:
@@ -25,6 +27,9 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      - name: Resolve docs version
+        run: echo "DOCS_VERSION=$(node -p 'require(\"./package.json\").version')" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         working-directory: docs-site

@@ -21,6 +21,8 @@ export interface Session {
   title: string;
   /** Optional template that seeded the system prompt. */
   templateId: string | null;
+  /** Templates currently layered into this chat's context. */
+  templateIds?: string[];
   /** Optional project grouping. */
   projectId: string | null;
   /** ISO-8601 creation timestamp. */

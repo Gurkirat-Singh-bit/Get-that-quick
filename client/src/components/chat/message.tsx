@@ -15,7 +15,6 @@
 import { useMemo, useState, isValidElement, type ComponentPropsWithoutRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
 import { Copy, Check, RotateCw, Maximize2, Wand2, BookmarkPlus, Brain, ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -454,7 +453,6 @@ export function Message({ message, onSaveAsTemplate, onRegenerate, onExpand, onR
       {thinking && <ThinkingBlock content={thinking} />}
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw]}
         components={markdownComponents}
       >
         {visible}

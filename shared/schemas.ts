@@ -36,6 +36,7 @@ export const SessionSchema = z.object({
   id: z.string(),
   title: z.string(),
   templateId: z.string().nullable(),
+  templateIds: z.array(z.string()).optional(),
   projectId: z.string().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -143,6 +144,7 @@ export const GenerateRequestSchema = z.object({
 export const CreateSessionRequestSchema = z.object({
   title: z.string().optional(),
   templateId: z.string().optional(),
+  templateIds: z.array(z.string()).optional(),
 });
 
 /** Zod schema for updating an existing session. */

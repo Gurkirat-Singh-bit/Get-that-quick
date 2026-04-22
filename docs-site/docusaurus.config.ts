@@ -1,6 +1,14 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import {themes as prismThemes} from 'prism-react-renderer';
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+
+const packageJson = JSON.parse(
+  fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8'),
+) as {version: string};
+
+const appVersion = process.env.DOCS_VERSION ?? packageJson.version;
 
 const config: Config = {
   title: 'GetThatQuick',
@@ -26,6 +34,10 @@ const config: Config = {
     locales: ['en'],
   },
 
+  customFields: {
+    version: appVersion,
+  },
+
   presets: [
     [
       'classic',
@@ -43,6 +55,13 @@ const config: Config = {
   ],
 
   themeConfig: {
+    announcementBar: {
+      id: 'release-version',
+      content: `Now shipping <strong>v${appVersion}</strong> with container-first deployment and automated releases.`,
+      backgroundColor: '#102033',
+      textColor: '#eff6ff',
+      isCloseable: true,
+    },
     navbar: {
       title: 'GetThatQuick',
       logo: {
@@ -55,7 +74,22 @@ const config: Config = {
           type: 'docSidebar',
           sidebarId: 'docsSidebar',
           position: 'left',
-          label: 'Documentation',
+          label: 'Project Docs',
+        },
+        {
+          to: '/',
+          label: 'Overview',
+          position: 'left',
+        },
+        {
+          to: '/docs/getting-started',
+          label: 'Get Started',
+          position: 'left',
+        },
+        {
+          type: 'html',
+          position: 'right',
+          value: `<span class="navbar-version">v${appVersion}</span>`,
         },
         {
           href: 'https://github.com/Gurkirat-Singh-bit/Get-that-quick',
@@ -80,10 +114,11 @@ const config: Config = {
           items: [
             { label: 'GitHub', href: 'https://github.com/Gurkirat-Singh-bit/Get-that-quick' },
             { label: 'License', href: 'https://github.com/Gurkirat-Singh-bit/Get-that-quick/blob/main/LICENSE' },
+            { label: `Version ${appVersion}`, to: '/' },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Gurkirat Singh. CC BY-NC 4.0.`,
+      copyright: `GetThatQuick v${appVersion} • Copyright © ${new Date().getFullYear()} Gurkirat Singh. CC BY-NC 4.0.`,
     },
     prism: {
       theme: prismThemes.github,
@@ -91,7 +126,7 @@ const config: Config = {
       additionalLanguages: ['bash', 'json', 'yaml', 'docker', 'typescript'],
     },
     colorMode: {
-      defaultMode: 'dark',
+      defaultMode: 'light',
       disableSwitch: false,
       respectPrefersColorScheme: true,
     },

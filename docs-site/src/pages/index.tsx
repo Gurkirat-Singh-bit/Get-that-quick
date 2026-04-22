@@ -66,50 +66,81 @@ const FEATURES = [
   {
     icon: <MicIcon />,
     title: 'Local Speech-to-Text',
-    description: 'Vosk-powered STT runs on your machine. 20+ language models. No cloud APIs needed.',
+    description: 'Vosk-powered STT runs on your machine with 20+ language packs and no mandatory cloud dependency.',
   },
   {
     icon: <LayoutIcon />,
     title: 'Template System',
-    description: 'Create, manage, and share prompt templates with YAML frontmatter. Sync community templates from GitHub.',
+    description: 'Create, version, and sync reusable prompts with frontmatter metadata and GitHub-backed template packs.',
   },
   {
     icon: <ZapIcon />,
     title: 'Multi-Provider LLM',
-    description: 'OpenRouter, OpenAI, Ollama, LM Studio, or any OpenAI-compatible endpoint.',
+    description: 'Switch between OpenRouter, OpenAI, Ollama, LM Studio, or any OpenAI-compatible endpoint.',
   },
   {
     icon: <ContainerIcon />,
     title: 'Single Docker Container',
-    description: 'One container, one command. Data persisted to ~/getthatquick via bind mount.',
+    description: 'Build once, deploy once, keep your state mounted on disk, and publish reproducible releases.',
   },
   {
     icon: <MessageIcon />,
     title: 'Chat Interface',
-    description: 'Streaming responses, markdown rendering, code highlighting, thinking tokens, plan mode.',
+    description: 'Streaming responses, markdown rendering, code highlighting, thinking tokens, and structured plan flows.',
   },
   {
     icon: <ShieldIcon />,
     title: 'Self-Hosted',
-    description: 'No accounts, no telemetry, no cloud dependency. Everything stays on your machine.',
+    description: 'No required accounts, no telemetry, and a local-first architecture that keeps project data on your machine.',
+  },
+];
+
+const DOC_SECTIONS = [
+  {
+    title: 'Install and Run',
+    href: '/docs/getting-started',
+    description: 'Quick start, Docker flow, development setup, and first-run configuration.',
+  },
+  {
+    title: 'Architecture',
+    href: '/docs/architecture/overview',
+    description: 'Client, server, shared schema flow, and how the containerized app fits together.',
+  },
+  {
+    title: 'API and Services',
+    href: '/docs/api/sessions',
+    description: 'REST endpoints, generation flow, model handling, and WebSocket speech-to-text.',
+  },
+  {
+    title: 'Deployment Guides',
+    href: '/docs/guides/docker-deployment',
+    description: 'Docker deployment, GitHub Pages docs, cloud STT, and prompt template formatting.',
   },
 ];
 
 function HeroSection() {
   const {siteConfig} = useDocusaurusContext();
   const logoSrc = useBaseUrl('/img/icon-white.png');
+  const version = String(siteConfig.customFields?.version ?? 'dev');
   return (
     <header className="hero-gtq">
       <div className="container">
+        <div className="hero-gtq__eyebrow">
+          <span className="hero-gtq__eyebrow-pill">Single project page</span>
+          <span className="hero-gtq__eyebrow-pill">v{version}</span>
+        </div>
         <img src={logoSrc} alt="GetThatQuick" className="hero-gtq__logo" />
         <h1 className="hero-gtq__title">{siteConfig.title}</h1>
         <p className="hero-gtq__subtitle">{siteConfig.tagline}</p>
+        <p className="hero-gtq__body">
+          A local-first prompt workbench for shipping faster: one container, one docs site, one versioned release flow.
+        </p>
         <div className="hero-gtq__actions">
           <Link className="hero-gtq__btn-primary" to="/docs/getting-started">
             Get Started
           </Link>
-          <Link className="hero-gtq__btn-secondary" to="/docs/architecture/overview">
-            Architecture
+          <Link className="hero-gtq__btn-secondary" to="/docs/guides/docker-deployment">
+            Deploy It
           </Link>
           <Link
             className="hero-gtq__btn-secondary"
@@ -128,19 +159,19 @@ function QuickInfo() {
     <div className="quick-info">
       <div className="quick-info__item">
         <span className="quick-info__value">Bun + Hono</span>
-        <span className="quick-info__label">Runtime</span>
+        <span className="quick-info__label">Backend Runtime</span>
       </div>
       <div className="quick-info__item">
         <span className="quick-info__value">React 19</span>
-        <span className="quick-info__label">Frontend</span>
+        <span className="quick-info__label">App Frontend</span>
       </div>
       <div className="quick-info__item">
         <span className="quick-info__value">20+</span>
         <span className="quick-info__label">STT Languages</span>
       </div>
       <div className="quick-info__item">
-        <span className="quick-info__value">Docker</span>
-        <span className="quick-info__label">Deployment</span>
+        <span className="quick-info__value">Release Please</span>
+        <span className="quick-info__label">Version Flow</span>
       </div>
     </div>
   );
@@ -163,6 +194,67 @@ function FeaturesSection() {
   );
 }
 
+function ProjectStory() {
+  return (
+    <section className="project-story">
+      <div className="project-story__lead">
+        <p className="section-kicker">Project overview</p>
+        <h2>One product page for the whole project</h2>
+        <p>
+          The docs home now behaves like a normal React landing page instead of a thin docs index. It gives you a
+          single place to explain the product, the container workflow, the release flow, and the key technical
+          building blocks without forcing visitors into the sidebar first.
+        </p>
+      </div>
+
+      <div className="project-story__grid">
+        {DOC_SECTIONS.map((section) => (
+          <Link key={section.href} to={section.href} className="project-story__card">
+            <span className="project-story__label">Open section</span>
+            <h3>{section.title}</h3>
+            <p>{section.description}</p>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ReleaseFlow() {
+  return (
+    <section className="release-flow">
+      <div className="release-flow__panel">
+        <p className="section-kicker">Ship with confidence</p>
+        <h2>Release and container workflows are part of the product story</h2>
+        <div className="release-flow__steps">
+          <div>
+            <span>01</span>
+            <h3>Version from main</h3>
+            <p>Release Please watches conventional commits, opens a release PR, updates the project version, and tags releases.</p>
+          </div>
+          <div>
+            <span>02</span>
+            <h3>Build the image</h3>
+            <p>The container workflow builds a multi-arch image and bakes the resolved release version into the app UI.</p>
+          </div>
+          <div>
+            <span>03</span>
+            <h3>Show the version everywhere</h3>
+            <p>The app shell, docs landing page, navbar, and footer all read the same release version so the deployment is obvious.</p>
+          </div>
+        </div>
+      </div>
+      <div className="release-flow__code">
+        <pre>
+          <code>{`feat: add release automation
+fix: align docs and app version badges
+chore: publish docker image on tags`}</code>
+        </pre>
+      </div>
+    </section>
+  );
+}
+
 export default function Home(): React.ReactElement {
   return (
     <Layout title="Home" description="Self-hosted AI prompt workbench documentation">
@@ -170,6 +262,8 @@ export default function Home(): React.ReactElement {
       <QuickInfo />
       <main>
         <FeaturesSection />
+        <ProjectStory />
+        <ReleaseFlow />
       </main>
     </Layout>
   );

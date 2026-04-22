@@ -11,19 +11,15 @@
  * @updated 2026-03-03
  */
 
-import {
-  LayoutGrid,
-  Globe,
-  FolderOpen,
-  FilePlus2,
-  BookOpen,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Github } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { LineIcon } from "@/components/icons/line-icon";
+import { PROJECT_DOCS_URL, PROJECT_GITHUB_URL } from "@/lib/project-meta";
 
 /** Which filter view is active in the templates sidebar. */
 export type TemplateFilter = "all" | "community" | "local";
@@ -53,6 +49,13 @@ export function RightIconRail({
   onToggleTemplates,
   onCreateTemplate,
 }: RightIconRailProps) {
+  const itemClass = (active?: boolean) => cn(
+    "w-9 h-9 flex items-center justify-center rounded-xl transition-colors border",
+    active
+      ? "border-white/10 bg-white/8 text-zinc-100"
+      : "border-transparent text-zinc-500 hover:text-zinc-200 hover:bg-white/5"
+  );
+
   const handleFilter = (filter: TemplateFilter) => {
     if (templatesOpen && activeFilter === filter) {
       onToggleTemplates();
@@ -62,20 +65,15 @@ export function RightIconRail({
   };
 
   return (
-    <aside className="w-14 flex flex-col items-center py-5 gap-1.5 shrink-0 bg-background-dark">
+    <aside className="w-14 flex flex-col items-center py-5 gap-1.5 shrink-0 bg-[#07080B] border-l border-white/[0.06]">
       {/* All Templates */}
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
           <button
             onClick={() => handleFilter("all")}
-            className={cn(
-              "w-9 h-9 flex items-center justify-center rounded-xl transition-all",
-              templatesOpen && activeFilter === "all"
-                ? "bg-white/10 text-white"
-                : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
-            )}
+            className={itemClass(templatesOpen && activeFilter === "all")}
           >
-            <LayoutGrid className="w-4.5 h-4.5" />
+            <LineIcon name="templates" className="w-5 h-5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="left" sideOffset={10}>All Templates</TooltipContent>
@@ -86,14 +84,9 @@ export function RightIconRail({
         <TooltipTrigger asChild>
           <button
             onClick={() => handleFilter("community")}
-            className={cn(
-              "w-9 h-9 flex items-center justify-center rounded-xl transition-all",
-              templatesOpen && activeFilter === "community"
-                ? "bg-white/10 text-white"
-                : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
-            )}
+            className={itemClass(templatesOpen && activeFilter === "community")}
           >
-            <Globe className="w-4.5 h-4.5" />
+            <LineIcon name="community" className="w-5 h-5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="left" sideOffset={10}>Community</TooltipContent>
@@ -104,14 +97,9 @@ export function RightIconRail({
         <TooltipTrigger asChild>
           <button
             onClick={() => handleFilter("local")}
-            className={cn(
-              "w-9 h-9 flex items-center justify-center rounded-xl transition-all",
-              templatesOpen && activeFilter === "local"
-                ? "bg-white/10 text-white"
-                : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
-            )}
+            className={itemClass(templatesOpen && activeFilter === "local")}
           >
-            <FolderOpen className="w-4.5 h-4.5" />
+            <LineIcon name="local" className="w-5 h-5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="left" sideOffset={10}>My Templates</TooltipContent>
@@ -122,9 +110,9 @@ export function RightIconRail({
         <TooltipTrigger asChild>
           <button
             onClick={onCreateTemplate}
-            className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-white hover:bg-white/5 transition-all"
+            className={itemClass(false)}
           >
-            <FilePlus2 className="w-4.5 h-4.5" />
+            <LineIcon name="new-template" className="w-5 h-5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="left" sideOffset={10}>New Template</TooltipContent>
@@ -132,16 +120,31 @@ export function RightIconRail({
 
       <div className="flex-1" />
 
+      {/* GitHub */}
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>
+          <a
+            href={PROJECT_GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={itemClass(false)}
+          >
+            <Github className="w-4.5 h-4.5" />
+          </a>
+        </TooltipTrigger>
+        <TooltipContent side="left" sideOffset={10}>GitHub</TooltipContent>
+      </Tooltip>
+
       {/* Docs */}
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
           <a
-            href="https://gurkirat-singh-bit.github.io/Get-that-quick/"
+            href={PROJECT_DOCS_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-all"
+            className={itemClass(false)}
           >
-            <BookOpen className="w-4.5 h-4.5" />
+            <LineIcon name="docs" className="w-5 h-5" />
           </a>
         </TooltipTrigger>
         <TooltipContent side="left" sideOffset={10}>Documentation</TooltipContent>

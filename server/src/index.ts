@@ -79,6 +79,7 @@ const BOLD = "\x1b[1m";
 const GREEN = "\x1b[32m";
 const RED = "\x1b[31m";
 const YELLOW = "\x1b[33m";
+const APP_VERSION = process.env.APP_VERSION ?? "1.1.0";
 
 function colorStatus(status: number): string {
   if (status < 300) return `${GREEN}${status}${RESET}`;
@@ -146,7 +147,7 @@ app.get("/api/health", (c) =>
     ok: true,
     data: {
       status: "running",
-      version: "0.1.0",
+      version: APP_VERSION,
       dataDir: getDataDir(),
     },
   })

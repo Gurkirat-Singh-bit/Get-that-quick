@@ -8,6 +8,8 @@ title: Introduction
 
 **Self-hosted AI prompt workbench** with speech-to-text, reusable templates, and multi-provider LLM support — all in a single Docker container.
 
+Current docs version: `v1.1.0`
+
 ## What is GetThatQuick?
 
 GetThatQuick is a local-first productivity tool that lets you:
@@ -71,9 +73,20 @@ GetThatQuick/
 | LLM Client | OpenAI SDK (compatible with any provider) |
 | Local STT | Vosk via `bun:ffi` (libvosk.so) |
 | Cloud STT | Groq Whisper / OpenAI Whisper (multipart upload) |
-| Markdown | react-markdown + remark-gfm + rehype-raw |
+| Markdown | react-markdown + remark-gfm |
 | Storage | Filesystem (JSON sessions, Markdown templates) |
 | Deployment | Docker (single container, multi-stage build) |
+
+## WebSocket Stack
+
+GetThatQuick uses **Bun's built-in WebSocket server**.
+
+- Upgrade path: `Bun.serve(... server.upgrade(req))`
+- Connection type: `ServerWebSocket`
+- Endpoint: `/ws/stt`
+- Purpose: real-time PCM audio streaming for speech-to-text
+
+There is no separate `ws` runtime dependency for the server transport layer.
 
 ## License
 
