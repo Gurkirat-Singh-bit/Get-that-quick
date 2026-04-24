@@ -3,7 +3,7 @@
 # Single-container setup. Data is persisted at ~/getthatquick on the host.
 #
 # Usage:
-#   docker compose up --build        # Build & start
+#   docker compose pull              # Pull latest GHCR image
 #   docker compose up -d             # Start in background
 #   docker compose down              # Stop
 #
@@ -11,9 +11,7 @@
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${GTQ_IMAGE:-ghcr.io/gurkirat-singh-bit/get-that-quick:latest}
     container_name: getthatquick
     ports:
       - "12233:3000"

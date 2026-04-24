@@ -142,9 +142,10 @@ setup_repo() {
 
 # ── Start the app ─────────────────────────────────────────────────────────
 start_app() {
-  info "Building and starting GetThatQuick (this may take a few minutes on first run)..."
+  info "Pulling and starting GetThatQuick from GHCR..."
   cd "$INSTALL_DIR"
-  $COMPOSE up --build -d
+  $COMPOSE pull
+  $COMPOSE up -d
   success "GetThatQuick is running!"
 }
 
@@ -166,4 +167,4 @@ printf "\n${GREEN}${BOLD}All done!${NC}\n"
 printf "  App:  ${CYAN}http://localhost:${PORT}${NC}\n"
 printf "  Data: ${CYAN}~/getthatquick${NC}\n\n"
 printf "To stop:   cd %s && %s down\n" "$INSTALL_DIR" "$COMPOSE"
-printf "To update: cd %s && git pull && %s up --build -d\n\n" "$INSTALL_DIR" "$COMPOSE"
+printf "To update: cd %s && git pull && %s pull && %s up -d\n\n" "$INSTALL_DIR" "$COMPOSE" "$COMPOSE"

@@ -5,7 +5,7 @@ title: Docker Deployment
 
 # Docker Deployment
 
-GetThatQuick runs as a single Docker container. The easiest way to deploy it is with the one-liner installer or Docker Compose.
+GetThatQuick runs as a single Docker container. The default deployment path is the published GHCR image, not a local source build.
 
 ---
 
@@ -31,7 +31,8 @@ What each script does:
 3. Installs **Docker** if not present (via get.docker.com / Docker Desktop)
 4. Waits for the Docker daemon to be ready
 5. Clones (or updates) the repo to `~/GetThatQuick`
-6. Runs `docker compose up --build -d`
+6. Pulls the latest GHCR image
+7. Runs `docker compose up -d`
 7. Prints the access URL
 
 The app will be available at **http://localhost:12233**.
@@ -45,7 +46,8 @@ If you already have git and Docker:
 ```bash
 git clone https://github.com/Gurkirat-Singh-bit/Get-that-quick.git
 cd Get-that-quick
-docker compose up --build -d
+docker compose pull
+docker compose up -d
 ```
 
 ---
@@ -57,7 +59,7 @@ The `docker-compose.yml` at the project root defines the service:
 ```yaml
 services:
   app:
-    build: .
+    image: ghcr.io/gurkirat-singh-bit/get-that-quick:latest
     container_name: getthatquick
     ports:
       - "12233:3000"
@@ -71,6 +73,7 @@ services:
 
 | Setting              | Value                  | Description                                 |
 | -------------------- | ---------------------- | ------------------------------------------- |
+| Image                | `ghcr.io/gurkirat-singh-bit/get-that-quick:latest` | Published runtime image |
 | Container name       | `getthatquick`         | Fixed container name                        |
 | External port        | `12233`                | Host port mapped to the container           |
 | Internal port        | `3000`                 | Application port inside the container       |
@@ -79,9 +82,18 @@ services:
 
 ---
 
-## Dockerfile
+## Source Builds
 
-The Dockerfile uses a **multi-stage build**:
+The repository still includes a multi-stage `Dockerfile`, but that path is for contributors and local code changes. End users should prefer the GHCR image above.
+
+### Build locally only when needed
+
+```bash
+docker build -t getthatquick:local .
+docker run --rm -p 12233:3000 -v ~/getthatquick:/data getthatquick:local
+```
+
+### Dockerfile layout
 
 ### Stage 1: Builder
 
@@ -121,13 +133,14 @@ The `libvosk.so` installation is **optional**. If it's not available, the applic
 
 ## Commands
 
-### Build and Start
+### Pull and Start
 
 ```bash
-docker compose up --build -d
+docker compose pull
+docker compose up -d
 ```
 
-Builds the image and starts the container in detached mode.
+Pulls the published image and starts the container in detached mode.
 
 ### View Logs
 
@@ -148,10 +161,12 @@ Stops and removes the container. Data is preserved in `~/getthatquick/`.
 ### Update to Latest
 
 ```bash
-git pull && docker compose up --build -d
+git pull
+docker compose pull
+docker compose up -d
 ```
 
-Pulls latest code and rebuilds the image.
+Pulls the latest code and the latest published container image.
 
 ---
 

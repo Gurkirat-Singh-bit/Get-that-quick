@@ -1,39 +1,37 @@
-# GetThatQuick
+<div align="center">
+  <img src="docs-site/static/img/icon.png" width="100" alt="GetThatQuick Logo" />
 
-Self-hosted AI prompt workbench with local or cloud speech-to-text, reusable templates, and multi-provider LLM support.
+  # GetThatQuick
 
-- Version: `v1.1.0`
-- Docs: <https://gurkirat-singh-bit.github.io/Get-that-quick/>
-- License: CC BY-NC 4.0
+  **Self-hosted AI prompt workbench with local speech-to-text, reusable templates, and multi-provider LLM support.**
+
+  [![Version](https://img.shields.io/badge/version-v1.1.1-blue.svg)](https://github.com/Gurkirat-Singh-bit/Get-that-quick/releases)
+  [![Docs](https://img.shields.io/badge/docs-available-success.svg)](https://gurkirat-singh-bit.github.io/Get-that-quick/)
+  [![License](https://img.shields.io/badge/license-CC_BY--NC_4.0-lightgrey.svg)](LICENSE)
+</div>
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/Gurkirat-Singh-bit/Get-that-quick.git
-cd Get-that-quick
-docker compose up --build -d
+# Linux / macOS
+curl -fsSL https://raw.githubusercontent.com/Gurkirat-Singh-bit/Get-that-quick/main/install.sh | sh
+
+# Windows (PowerShell - Run as Administrator)
+irm https://raw.githubusercontent.com/Gurkirat-Singh-bit/Get-that-quick/main/install.ps1 | iex
 ```
 
-Open `http://localhost:12233`.
+Open `http://localhost:12233` once the container is running.
 
 ## Stack
 
-- Frontend: React 19 + Vite
-- Backend: Bun + Hono
-- Real-time STT: Bun built-in WebSocket server at `/ws/stt`
-- Local STT: Vosk
-- Shared contracts: TypeScript + Zod
-- Deployment: single Docker container
+- **Frontend:** React 19 + Vite
+- **Backend:** Bun + Hono
+- **Real-time STT:** Bun built-in WebSocket server + Vosk
+- **Deployment:** Single Docker container
 
-## Docs
+## Documentation
 
-Use the docs site for:
-
-- getting started
-- architecture
-- API reference
-- changelog
-- deployment guides
+For full guides, architecture overviews, and API references, check out the [Documentation Site](https://gurkirat-singh-bit.github.io/Get-that-quick/).
 
 ## Development
 
@@ -44,4 +42,4 @@ cd client && bun install && bun run dev
 
 ## License
 
-See [LICENSE](LICENSE).
+See [LICENSE](LICENSE) for more details.

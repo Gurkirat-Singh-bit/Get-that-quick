@@ -55,12 +55,10 @@ const config: Config = {
   ],
 
   themeConfig: {
-    announcementBar: {
-      id: 'release-version',
-      content: `Now shipping <strong>v${appVersion}</strong> with container-first deployment and automated releases.`,
-      backgroundColor: '#102033',
-      textColor: '#eff6ff',
-      isCloseable: true,
+    colorMode: {
+      defaultMode: 'dark',
+      disableSwitch: false,
+      respectPrefersColorScheme: false,
     },
     navbar: {
       title: 'GetThatQuick',
@@ -74,17 +72,7 @@ const config: Config = {
           type: 'docSidebar',
           sidebarId: 'docsSidebar',
           position: 'left',
-          label: 'Project Docs',
-        },
-        {
-          to: '/',
-          label: 'Overview',
-          position: 'left',
-        },
-        {
-          to: '/docs/getting-started',
-          label: 'Get Started',
-          position: 'left',
+          label: 'Documentation',
         },
         {
           type: 'html',
@@ -93,8 +81,9 @@ const config: Config = {
         },
         {
           href: 'https://github.com/Gurkirat-Singh-bit/Get-that-quick',
-          label: 'GitHub',
           position: 'right',
+          className: 'navbar-github-link',
+          'aria-label': 'GitHub repository',
         },
       ],
     },
@@ -114,22 +103,18 @@ const config: Config = {
           items: [
             { label: 'GitHub', href: 'https://github.com/Gurkirat-Singh-bit/Get-that-quick' },
             { label: 'License', href: 'https://github.com/Gurkirat-Singh-bit/Get-that-quick/blob/main/LICENSE' },
-            { label: `Version ${appVersion}`, to: '/' },
+            { label: `v${appVersion} Changelog`, to: '/docs/changelog' },
           ],
         },
       ],
-      copyright: `GetThatQuick v${appVersion} • Copyright © ${new Date().getFullYear()} Gurkirat Singh. CC BY-NC 4.0.`,
+      copyright: `GetThatQuick v${appVersion} · Copyright © ${new Date().getFullYear()} Gurkirat Singh. CC BY-NC 4.0.`,
     },
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
       additionalLanguages: ['bash', 'json', 'yaml', 'docker', 'typescript'],
     },
-    colorMode: {
-      defaultMode: 'light',
-      disableSwitch: false,
-      respectPrefersColorScheme: true,
-    },
+
   } satisfies Preset.ThemeConfig,
 };
 

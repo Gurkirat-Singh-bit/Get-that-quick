@@ -112,9 +112,11 @@ if (Test-Path (Join-Path $INSTALL_DIR ".git")) {
 Write-Ok "Repo ready at $INSTALL_DIR"
 
 # ── Start the app ─────────────────────────────────────────────────────────
-Write-Info "Building and starting GetThatQuick (this may take a few minutes on first run)..."
+Write-Info "Pulling and starting GetThatQuick from GHCR..."
 Set-Location "$INSTALL_DIR"
-& docker compose up --build -d
+& docker compose pull
+if ($LASTEXITCODE -ne 0) { Write-Err "docker compose pull failed." }
+& docker compose up -d
 if ($LASTEXITCODE -ne 0) { Write-Err "docker compose up failed." }
 Write-Ok "GetThatQuick is running!"
 
@@ -124,5 +126,5 @@ Write-Host "  App:  http://localhost:$PORT" -ForegroundColor Cyan
 Write-Host "  Data: $env:USERPROFILE\getthatquick" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "To stop:   cd `"$INSTALL_DIR`"; docker compose down"
-Write-Host "To update: cd `"$INSTALL_DIR`"; git pull; docker compose up --build -d"
+Write-Host "To update: cd `"$INSTALL_DIR`"; git pull; docker compose pull; docker compose up -d"
 Write-Host ""

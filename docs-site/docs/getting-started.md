@@ -40,10 +40,19 @@ If you prefer step-by-step control:
 ```bash
 git clone https://github.com/Gurkirat-Singh-bit/Get-that-quick.git
 cd Get-that-quick
-docker compose up --build -d
+docker compose pull
+docker compose up -d
 ```
 
 Open **http://localhost:12233** in your browser.
+
+By default, the compose file pulls the published GHCR image:
+
+```text
+ghcr.io/gurkirat-singh-bit/get-that-quick:latest
+```
+
+That means a normal install does not rebuild the app locally.
 
 All persistent data is stored at `~/getthatquick/` on your host machine:
 
@@ -111,7 +120,9 @@ On first launch, the **Onboarding Wizard** will guide you through:
 
 ---
 
-## Build for Production
+## Build From Source
+
+Only use this path if you are actively modifying the codebase or testing local changes.
 
 ```bash
 # Build the client
@@ -132,6 +143,7 @@ The `docker-compose.yml` maps:
 | Container port | `3000` |
 | Host port | `12233` |
 | Data volume | `~/getthatquick:/data` |
+| Image | `ghcr.io/gurkirat-singh-bit/get-that-quick:latest` |
 | Restart policy | `unless-stopped` |
 
 Environment variables:
