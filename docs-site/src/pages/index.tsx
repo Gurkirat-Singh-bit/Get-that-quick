@@ -66,7 +66,7 @@ export default function Home(): React.ReactElement {
               <Link className="lp-btn lp-btn--fill" to="/docs/getting-started">
                 Get Started
               </Link>
-              <Link className="lp-btn lp-btn--outline" to="/docs/intro">
+              <Link className="lp-btn lp-btn--outline" to="/docs/">
                 Documentation
               </Link>
             </div>
