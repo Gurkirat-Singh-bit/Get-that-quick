@@ -38,6 +38,8 @@ jobs:
       - name: Build Docusaurus
         working-directory: docs-site
         run: bun run build
+        env:
+          DOCS_VERSION: ${{ env.DOCS_VERSION }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
